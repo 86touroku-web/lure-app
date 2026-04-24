@@ -561,21 +561,30 @@ body {
     このファイル冒頭の <code>GAS_URL</code> を GAS のデプロイURLに変更してください。
   </div>
 
-  <!-- スキャン＋手入力エリア -->
+  <!-- ══ スキャン＋手入力エリア ══ -->
   <div style="display:flex;gap:.6rem;margin-bottom:.8rem;align-items:stretch;">
-    <button class="big-btn btn-scan" style="flex:1;margin-bottom:0;" onclick="startScanner('ship')">
-      📷 スキャン
+    <!-- スキャンボタン（左・高さ全体） -->
+    <button class="big-btn btn-scan"
+            style="flex:1;margin-bottom:0;min-height:8rem;font-size:1.6rem;"
+            onclick="startScanner('ship')">
+      📷<br>スキャン
     </button>
-    <div style="display:flex;flex-direction:column;gap:.4rem;flex:1;">
-      <input type="text" inputmode="none"
+    <!-- 入力欄＋検索ボタン（右） -->
+    <div style="flex:1;display:flex;flex-direction:column;gap:.5rem;">
+      <input type="text"
+             inputmode="text"
+             autocomplete="off"
+             autocorrect="off"
+             autocapitalize="characters"
+             spellcheck="false"
              id="ship-manual-input"
              class="inp"
-             style="height:2.8rem;font-size:1.3rem;letter-spacing:.05em;text-transform:uppercase;"
+             style="flex:1;font-size:1.4rem;letter-spacing:.06em;"
              placeholder="バーコード / 商品NO"
-             oninput="this.value=this.value.replace(/[^A-Za-z0-9\-]/g,'')"
+             oninput="this.value=this.value.replace(/[^A-Za-z0-9\-]/g,'').toUpperCase()"
              onkeydown="if(event.key==='Enter'){searchManual('ship')}">
       <button class="big-btn btn-save"
-              style="margin-bottom:0;height:2.8rem;font-size:1.3rem;flex:none;"
+              style="margin-bottom:0;height:3.6rem;font-size:1.4rem;"
               onclick="searchManual('ship')">🔍 検索</button>
     </div>
   </div>
@@ -586,61 +595,76 @@ body {
     バーコードをスキャンまたは<br>手入力で検索してください
   </div>
 
-  <!-- 商品詳細（スキャン後に表示） -->
+  <!-- ══ 商品詳細（スキャン／検索後に表示） ══ -->
   <div id="ship-detail" style="display:none">
 
-    <!-- 画像 + バーコード情報 横並び -->
-    <div class="card" style="padding:.8rem;">
+    <!-- ① 画像 ＋ 右側情報カード -->
+    <div class="card" style="padding:.8rem;margin-bottom:.8rem;">
       <div style="display:flex;gap:.8rem;align-items:flex-start;">
 
         <!-- 左：画像 -->
-        <div style="flex-shrink:0;width:10rem;">
-          <img id="ship-img" class="product-img"
-               style="width:10rem;height:10rem;object-fit:contain;border-radius:.8rem;background:#f5f5f5;"
+        <div style="flex-shrink:0;width:9.6rem;">
+          <img id="ship-img"
+               style="width:9.6rem;height:9.6rem;object-fit:contain;border-radius:.8rem;background:#f0f4f8;display:block;"
                src="" alt="商品画像">
-          <div id="ship-no-img" class="no-img"
-               style="display:none;width:10rem;height:10rem;font-size:1.1rem;">
-            🖼️ 画像なし
+          <div id="ship-no-img"
+               style="display:none;width:9.6rem;height:9.6rem;background:#eceff1;border-radius:.8rem;
+                      align-items:center;justify-content:center;flex-direction:column;
+                      color:#90a4ae;font-size:1.1rem;gap:.3rem;">
+            🖼️<br>画像なし
           </div>
         </div>
 
-        <!-- 右：バーコード・商品NO・保管バーコード -->
-        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:.5rem;">
-          <div>
-            <div class="row-label">バーコード</div>
-            <div class="row-val" id="ship-barcode" style="font-size:1.6rem;font-weight:800;">-</div>
+        <!-- 右：バーコード・商品NO横並び → 保管BC → 商品名 → 備考 -->
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:.4rem;">
+
+          <!-- バーコード ＋ 商品NO 横並び -->
+          <div style="display:flex;gap:.6rem;">
+            <div style="flex:1;min-width:0;">
+              <div class="row-label">バーコード</div>
+              <div id="ship-barcode"
+                   style="font-size:1.5rem;font-weight:800;color:var(--text-dark);line-height:1.2;">-</div>
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div class="row-label">商品NO</div>
+              <div id="ship-no"
+                   style="font-size:1.5rem;font-weight:800;color:var(--text-dark);line-height:1.2;">-</div>
+            </div>
           </div>
-          <div>
-            <div class="row-label">商品NO</div>
-            <div class="row-val" id="ship-no" style="font-size:1.6rem;font-weight:800;">-</div>
-          </div>
+
+          <!-- 保管バーコード（2行まで折り返し） -->
           <div>
             <div class="row-label">保管バーコード</div>
-            <div class="row-val" id="ship-bc-storage"
-                 style="font-size:1.3rem;font-weight:700;word-break:break-all;line-height:1.4;">-</div>
+            <div id="ship-bc-storage"
+                 style="font-size:1.25rem;font-weight:700;color:var(--text-dark);
+                        word-break:break-all;line-height:1.45;
+                        display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">-</div>
           </div>
+
+          <!-- 商品名 -->
           <div>
-            <div class="row-label">ステータス</div>
-            <div class="row-val"><span class="status-badge" id="ship-status-badge">-</span></div>
+            <div class="row-label">商品名</div>
+            <div id="ship-name"
+                 style="font-size:1.3rem;font-weight:700;color:var(--text-dark);line-height:1.4;">-</div>
           </div>
+
+          <!-- 備考 -->
+          <div>
+            <div class="row-label">備考</div>
+            <div id="ship-note"
+                 style="font-size:1.2rem;color:var(--text-mid);line-height:1.4;">-</div>
+          </div>
+
         </div>
       </div>
     </div>
 
-    <!-- 基本情報（参照） -->
-    <div class="card">
+    <!-- ② 詳細情報カード -->
+    <div class="card" style="margin-bottom:.8rem;">
       <div class="info-grid">
-        <div class="info-item full">
-          <div class="row-label">商品名</div>
-          <div class="row-val" id="ship-name">-</div>
-        </div>
         <div class="info-item full">
           <div class="row-label">メーカー</div>
           <div class="row-val" id="ship-maker">-</div>
-        </div>
-        <div class="info-item full">
-          <div class="row-label">備考</div>
-          <div class="row-val" id="ship-note">-</div>
         </div>
         <div class="info-item">
           <div class="row-label">サイズ・数量</div>
@@ -665,32 +689,42 @@ body {
       </div>
     </div>
 
-    <!-- 編集エリア -->
-    <div class="card">
-      <div class="row-label" style="font-size:var(--fs-sm);margin-bottom:.6rem">● 編集項目</div>
+    <!-- ③ 編集エリア -->
+    <div class="card" style="margin-bottom:.8rem;">
+      <div class="row-label" style="font-size:var(--fs-sm);margin-bottom:.6rem;">● 編集項目</div>
 
-      <!-- ステータス変更 -->
-      <div class="form-row" style="margin-bottom:.8rem">
-        <div style="font-size:var(--fs-xs);font-weight:700;color:var(--blue-mid);margin-bottom:.4rem">ステータス</div>
+      <!-- ステータス -->
+      <div style="margin-bottom:.8rem;">
+        <div style="font-size:var(--fs-xs);font-weight:700;color:var(--blue-mid);margin-bottom:.4rem;">
+          ステータス
+        </div>
+        <div style="font-size:var(--fs-xs);color:#78909c;margin-bottom:.4rem;">
+          現在：<span id="ship-status-badge" class="status-badge">-</span>
+        </div>
         <div class="chip-grp" id="ship-status-chips"></div>
       </div>
 
       <div class="divider"></div>
 
-      <!-- 販売済日（発送日） -->
-      <div class="form-row" style="margin-bottom:.8rem">
-        <div style="font-size:var(--fs-xs);font-weight:700;color:var(--blue-mid);margin-bottom:.4rem">📅 販売済日（発送日）</div>
+      <!-- 販売済日 -->
+      <div style="margin-bottom:.8rem;">
+        <div style="font-size:var(--fs-xs);font-weight:700;color:var(--blue-mid);margin-bottom:.4rem;">
+          📅 販売済日（発送日）
+        </div>
         <input type="date" class="inp" id="ship-sold-date">
       </div>
 
       <!-- 販売金額 -->
-      <div class="form-row" style="margin-bottom:.8rem">
-        <div style="font-size:var(--fs-xs);font-weight:700;color:var(--blue-mid);margin-bottom:.4rem">💴 販売金額</div>
-        <input type="text" inputmode="numeric" class="inp" id="ship-sell-price" placeholder="例：1500">
+      <div style="margin-bottom:.4rem;">
+        <div style="font-size:var(--fs-xs);font-weight:700;color:var(--blue-mid);margin-bottom:.4rem;">
+          💴 販売金額
+        </div>
+        <input type="text" inputmode="numeric" class="inp"
+               id="ship-sell-price" placeholder="例：1500">
       </div>
     </div>
 
-    <!-- 保存・クリアボタン -->
+    <!-- ④ 保存・クリアボタン -->
     <div class="btn-row">
       <button class="big-btn btn-save" onclick="saveShipping()">💾 保存</button>
       <button class="big-btn btn-clear" onclick="clearShip()">🗑 クリア</button>
