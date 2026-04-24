@@ -1025,15 +1025,6 @@ async function startScanner(mode) {
   document.getElementById('cam-switch-btn').style.display =
     backCams.length > 1 ? 'inline-block' : 'none';
 
-  // ── カメラ起動 ──
-  // すでにストリームが生きていれば再起動しない（許可ポップアップ防止）
-  // html5QrCode インスタンスが存在すればカメラは動いている
-  if (html5QrCode) {
-    // モーダルを開くだけ（カメラは継続動作中）
-    scanCooldown = false;
-    return;
-  }
-
   await launchCamera();
 }
 
@@ -1082,13 +1073,13 @@ function onScanSuccess(decodedText) {
 
   if (navigator.vibrate) navigator.vibrate(80);
 
-  // ★ カメラを停止せずモーダルだけ閉じる（2回目以降の許可不要に）
-  document.getElementById('scanner-ov').classList.remove('open');
-
-  setTimeout(() => {
-    fetchProduct(decodedText.trim(), scanMode);
-    scanCooldown = false;
-  }, 300);
+  // カメラを完全停止してからGAS通信（Galaxyの「今回のみ」権限対策）
+  closeScanner().then(() => {
+    setTimeout(() => {
+      fetchProduct(decodedText.trim(), scanMode);
+      scanCooldown = false;
+    }, 200);
+  });
 }
 
 function onScanFailure(error) {
@@ -1097,8 +1088,18 @@ function onScanFailure(error) {
 
 async function closeScanner() {
   document.getElementById('scanner-ov').classList.remove('open');
-  // ★ カメラは停止しない → 次回起動時に許可ポップアップが出なくなる
-  // （タブを閉じるか画面遷移すると自動停止される）
+  // カメラを毎回停止（Samsung Galaxy「今回のみ」権限に対応）
+  if (html5QrCode) {
+    try {
+      await html5QrCode.stop();
+    } catch(e) {
+      console.warn('camera stop error:', e);
+    }
+    html5QrCode = null;
+  }
+  // html5-qrcodeが生成したDOM要素をクリア（再起動のため）
+  const reader = document.getElementById('qr-reader');
+  if (reader) reader.innerHTML = '';
 }
 
 async function switchCamera() {
