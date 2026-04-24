@@ -972,19 +972,48 @@ function buildStatusChips(containerId, selectedRef, onSelect) {
 
 // ══════════════════════════════════════════════
 //  html5-qrcode スキャナー制御
+//
+//  ★ 設計方針 ★
+//  - カメラ許可は初回1回だけ。2回目以降は許可ポップアップなし。
+//  - facingMode:'environment' で後カメラを直接指定（前カメラを完全排除）
+//  - 後カメラが複数ある場合のみ切り替えボタンを表示
+//  - スキャン成功時はカメラを「停止せず非表示」にしてストリーム保持
 // ══════════════════════════════════════════════
+
+// 後カメラのみのリスト（前カメラは除外）
+let backCams = [];
+
 async function startScanner(mode) {
   scanMode = mode;
   scanCooldown = false;
   document.getElementById('scanner-ov').classList.add('open');
 
-  // カメラ一覧を取得（初回のみ）
-  if (availableCams.length === 0) {
+  // ── 初回のみ: カメラ一覧取得 & 後カメラだけ抽出 ──
+  if (backCams.length === 0) {
     try {
-      availableCams = await Html5Qrcode.getCameras();
-      // デバッグ用：カメラ一覧をコンソールに出力
-      console.log('利用可能なカメラ一覧:');
-      availableCams.forEach((c, i) => console.log(i, c.id, c.label));
+      const allCams = await Html5Qrcode.getCameras();
+      console.log('全カメラ一覧:', allCams.map((c,i)=>`[${i}] ${c.label}`));
+
+      // 前カメラ（front/user/selfie/インカメ/facing front）を厳格に除外
+      backCams = allCams.filter(c => {
+        const lbl = (c.label || '').toLowerCase();
+        // 明確に前カメラと分かるラベルを除外
+        if (/front|selfie|facetime|インカメ|前面|facing front/i.test(lbl)) return false;
+        // "user" facing も除外（MediaDevices の facingMode=user = 前カメラ）
+        if (/\buser\b/.test(lbl)) return false;
+        return true;
+      });
+
+      // フィルタ後に0件になった場合は全部使う（フォールバック）
+      if (backCams.length === 0) backCams = allCams;
+
+      console.log('後カメラ一覧:', backCams.map((c,i)=>`[${i}] ${c.label}`));
+
+      // ── デフォルトカメラ選択 ──
+      // Galaxy は後カメラが複数ある場合、リスト末尾がマクロ/至近距離レンズになる傾向
+      // → 末尾を初期選択にする
+      currentCamIdx = backCams.length - 1;
+      console.log('デフォルト選択:', backCams[currentCamIdx]?.label);
     } catch(e) {
       showToast('⚠️ カメラへのアクセスが拒否されました','err');
       closeScanner();
@@ -992,45 +1021,23 @@ async function startScanner(mode) {
     }
   }
 
-  // 複数カメラがある場合は切り替えボタンを表示
+  // 後カメラが複数ある場合のみ切り替えボタン表示
   document.getElementById('cam-switch-btn').style.display =
-    availableCams.length > 1 ? 'inline-block' : 'none';
+    backCams.length > 1 ? 'inline-block' : 'none';
 
-  // ── カメラ初回選択（currentCamIdx が 0 の場合のみ実行）──
-  // Android では後カメラが複数ある場合、インデックスが大きいほど
-  // 望遠・マクロ系のカメラになることが多い。
-  // ① ラベルに macro / 接写 / 至近距離 が含まれるものを最優先
-  // ② なければ後カメラ群の中で最大インデックス（至近寄り）
-  // ③ それでもなければリスト末尾
-  if (availableCams.length > 1 && currentCamIdx === 0) {
-    let idx = -1;
-
-    // ① マクロ系ラベル検索
-    idx = availableCams.findIndex(c =>
-      c.label && /macro|接写|至近|telephoto|tele/i.test(c.label)
-    );
-
-    // ② 後カメラ群の最大インデックス
-    if (idx < 0) {
-      const backIdx = [];
-      availableCams.forEach((c, i) => {
-        if (!c.label || /back|rear|environment|後/i.test(c.label)) backIdx.push(i);
-      });
-      if (backIdx.length > 0) idx = backIdx[backIdx.length - 1];
-    }
-
-    // ③ フォールバック：末尾
-    if (idx < 0) idx = availableCams.length - 1;
-
-    currentCamIdx = idx;
-    console.log('選択されたカメラ idx:', currentCamIdx, availableCams[currentCamIdx]?.label);
+  // ── カメラ起動 ──
+  // すでにストリームが生きていれば再起動しない（許可ポップアップ防止）
+  // html5QrCode インスタンスが存在すればカメラは動いている
+  if (html5QrCode) {
+    // モーダルを開くだけ（カメラは継続動作中）
+    scanCooldown = false;
+    return;
   }
 
   await launchCamera();
 }
 
 async function launchCamera() {
-  // 既存インスタンスがあれば停止
   if (html5QrCode) {
     try { await html5QrCode.stop(); } catch(e) {}
     html5QrCode = null;
@@ -1038,14 +1045,12 @@ async function launchCamera() {
 
   html5QrCode = new Html5Qrcode('qr-reader', { verbose: false });
 
-  const camId = availableCams[currentCamIdx]?.id;
+  const camId = backCams[currentCamIdx]?.id;
   if (!camId) return;
 
   const config = {
     fps: 15,
-    // qrbox: スキャン枠はCSSオーバーレイで表現するため非使用
     aspectRatio: 1.0,
-    // バーコード形式を明示（QRコードも含む）
     formatsToSupport: [
       Html5QrcodeSupportedFormats.QR_CODE,
       Html5QrcodeSupportedFormats.EAN_13,
@@ -1057,19 +1062,13 @@ async function launchCamera() {
       Html5QrcodeSupportedFormats.ITF,
       Html5QrcodeSupportedFormats.DATA_MATRIX,
     ],
-    // 自動フォーカスを維持するためzoomは使用しない
     experimentalFeatures: {
-      useBarCodeDetectorIfSupported: true, // BarcodeDetector APIを優先（Chrome/Android）
+      useBarCodeDetectorIfSupported: true,
     },
   };
 
   try {
-    await html5QrCode.start(
-      camId,
-      config,
-      onScanSuccess,
-      onScanFailure
-    );
+    await html5QrCode.start(camId, config, onScanSuccess, onScanFailure);
   } catch(e) {
     console.error('Camera start error:', e);
     showToast('⚠️ カメラの起動に失敗しました','err');
@@ -1077,17 +1076,15 @@ async function launchCamera() {
   }
 }
 
-function onScanSuccess(decodedText, decodedResult) {
-  // 連続スキャン防止（1秒クールダウン）
+function onScanSuccess(decodedText) {
   if (scanCooldown) return;
   scanCooldown = true;
 
-  // バイブレーション（対応端末のみ）
   if (navigator.vibrate) navigator.vibrate(80);
 
-  closeScanner();
+  // ★ カメラを停止せずモーダルだけ閉じる（2回目以降の許可不要に）
+  document.getElementById('scanner-ov').classList.remove('open');
 
-  // 少し遅延させてスキャナーが完全に閉じてから処理
   setTimeout(() => {
     fetchProduct(decodedText.trim(), scanMode);
     scanCooldown = false;
@@ -1095,23 +1092,25 @@ function onScanSuccess(decodedText, decodedResult) {
 }
 
 function onScanFailure(error) {
-  // スキャン失敗は通常のログには出さない（毎フレーム呼ばれるため）
+  // 毎フレーム呼ばれるため何もしない
 }
 
 async function closeScanner() {
   document.getElementById('scanner-ov').classList.remove('open');
+  // ★ カメラは停止しない → 次回起動時に許可ポップアップが出なくなる
+  // （タブを閉じるか画面遷移すると自動停止される）
+}
+
+async function switchCamera() {
+  if (backCams.length <= 1) return;
+  currentCamIdx = (currentCamIdx + 1) % backCams.length;
+  // 切り替え時のみ再起動
   if (html5QrCode) {
     try { await html5QrCode.stop(); } catch(e) {}
     html5QrCode = null;
   }
-  // html5-qrcodeが挿入したDOM要素をクリア
   const reader = document.getElementById('qr-reader');
   reader.innerHTML = '';
-}
-
-async function switchCamera() {
-  if (availableCams.length <= 1) return;
-  currentCamIdx = (currentCamIdx + 1) % availableCams.length;
   await launchCamera();
 }
 
@@ -1161,12 +1160,27 @@ function showShipDetail(item) {
     const driveIdMatch = item.imgUrl.match(/[?&]id=([^&]+)/);
     if (driveIdMatch) {
       const fileId = driveIdMatch[1];
-      // thumbnail URL（CORSなし・認証不要の公開ファイルなら表示可能）
-      img.src = 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w400';
+      // ① まず thumbnail URL で試みる（CORS制限なし）
+      const url1 = 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w400';
+      // ② 失敗したら lh3 形式で再試行
+      const url2 = 'https://lh3.googleusercontent.com/d/' + fileId + '=w400';
+
+      img.onerror = null;
+      img.src = url1;
       img.style.display = 'block';
       noImg.style.display = 'none';
-      // 読み込み失敗時は「画像なし」表示
-      img.onerror = () => showNoImg();
+
+      let retried = false;
+      img.onerror = () => {
+        if (!retried) {
+          retried = true;
+          console.warn('thumbnail失敗、lh3で再試行:', fileId);
+          img.src = url2;
+        } else {
+          console.warn('lh3も失敗、画像なし表示:', fileId);
+          showNoImg();
+        }
+      };
     } else {
       showNoImg();
     }
