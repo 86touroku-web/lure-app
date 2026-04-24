@@ -773,7 +773,7 @@ body {
 //  GASエディタ → デプロイ → 新しいデプロイ → ウェブアプリ
 //  → アクセスできるユーザー「全員」でデプロイ → URLをコピー
 // ══════════════════════════════════════════════
-const GAS_URL = 'https://script.google.com/macros/s/https://script.google.com/macros/s/AKfycbwszCwfSETnzE2RvEMb2qXCPPuqgD8Ybu6efEw6t714REwHQVJtEE-Qu7WeWZx-oGZ12w/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwszCwfSETnzE2RvEMb2qXCPPuqgD8Ybu6efEw6t714REwHQVJtEE-Qu7WeWZx-oGZ12w/exec';
 
 // ══════════════════════════════════════════════
 //  定数・状態管理
@@ -982,6 +982,9 @@ async function startScanner(mode) {
   if (availableCams.length === 0) {
     try {
       availableCams = await Html5Qrcode.getCameras();
+      // デバッグ用：カメラ一覧をコンソールに出力
+      console.log('利用可能なカメラ一覧:');
+      availableCams.forEach((c, i) => console.log(i, c.id, c.label));
     } catch(e) {
       showToast('⚠️ カメラへのアクセスが拒否されました','err');
       closeScanner();
@@ -993,25 +996,34 @@ async function startScanner(mode) {
   document.getElementById('cam-switch-btn').style.display =
     availableCams.length > 1 ? 'inline-block' : 'none';
 
-  // カメラ優先順位：マクロ/至近距離 → 広角/超広角 → 通常後カメラ
+  // ── カメラ初回選択（currentCamIdx が 0 の場合のみ実行）──
+  // Android では後カメラが複数ある場合、インデックスが大きいほど
+  // 望遠・マクロ系のカメラになることが多い。
+  // ① ラベルに macro / 接写 / 至近距離 が含まれるものを最優先
+  // ② なければ後カメラ群の中で最大インデックス（至近寄り）
+  // ③ それでもなければリスト末尾
   if (availableCams.length > 1 && currentCamIdx === 0) {
-    // ① マクロ・至近距離カメラを最優先
-    let idx = availableCams.findIndex(c =>
-      c.label && /macro|マクロ|ultra.?wide|ultrawide|超広角|wide/i.test(c.label)
+    let idx = -1;
+
+    // ① マクロ系ラベル検索
+    idx = availableCams.findIndex(c =>
+      c.label && /macro|接写|至近|telephoto|tele/i.test(c.label)
     );
-    // ② 見つからなければ後カメラ全般から末尾（通常は広角〜望遠の順で並ぶ）
+
+    // ② 後カメラ群の最大インデックス
     if (idx < 0) {
-      // Androidは後カメラが複数ある場合、最後のインデックスが望遠/マクロのことが多い
-      const backIndices = availableCams.reduce((acc, c, i) => {
-        if (c.label && /back|rear|environment/i.test(c.label)) acc.push(i);
-        return acc;
-      }, []);
-      // 後カメラのうち最後（インデックスが大きい方）を選ぶ
-      if (backIndices.length > 0) idx = backIndices[backIndices.length - 1];
+      const backIdx = [];
+      availableCams.forEach((c, i) => {
+        if (!c.label || /back|rear|environment|後/i.test(c.label)) backIdx.push(i);
+      });
+      if (backIdx.length > 0) idx = backIdx[backIdx.length - 1];
     }
-    // ③ それでも見つからなければリストの末尾
+
+    // ③ フォールバック：末尾
     if (idx < 0) idx = availableCams.length - 1;
+
     currentCamIdx = idx;
+    console.log('選択されたカメラ idx:', currentCamIdx, availableCams[currentCamIdx]?.label);
   }
 
   await launchCamera();
@@ -1134,22 +1146,32 @@ function showShipDetail(item) {
   document.getElementById('ship-empty').style.display  = 'none';
   document.getElementById('ship-detail').style.display = 'block';
 
-  // 画像
-  // Google Drive の uc?export=view URL は GitHub Pages からだと
-  // CORS でブロックされるため thumbnail URL（CORS制限なし）に変換して表示
+  // 画像表示
+  // Google Drive: uc?export=view は CORS でブロックされるため
+  // thumbnail URL → lh3.googleusercontent → 画像なし の順でフォールバック
   const img   = document.getElementById('ship-img');
   const noImg = document.getElementById('ship-no-img');
-  if (item.imgUrl) {
-    const driveIdMatch = item.imgUrl.match(/[?&]id=([^&]+)/);
-    const imgSrc = driveIdMatch
-      ? 'https://drive.google.com/thumbnail?id=' + driveIdMatch[1] + '&sz=w400'
-      : item.imgUrl;
-    img.src = imgSrc;
-    img.style.display = 'block';
-    noImg.style.display = 'none';
-  } else {
+
+  function showNoImg() {
     img.style.display = 'none';
     noImg.style.display = 'flex';
+  }
+
+  if (item.imgUrl) {
+    const driveIdMatch = item.imgUrl.match(/[?&]id=([^&]+)/);
+    if (driveIdMatch) {
+      const fileId = driveIdMatch[1];
+      // thumbnail URL（CORSなし・認証不要の公開ファイルなら表示可能）
+      img.src = 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w400';
+      img.style.display = 'block';
+      noImg.style.display = 'none';
+      // 読み込み失敗時は「画像なし」表示
+      img.onerror = () => showNoImg();
+    } else {
+      showNoImg();
+    }
+  } else {
+    showNoImg();
   }
 
   setText('ship-barcode',    item.バーコード);
