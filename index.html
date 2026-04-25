@@ -2,652 +2,1578 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>ルアー在庫管理</title>
-<script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
+<meta name="viewport" content="width=375, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>診療記録</title>
 <style>
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;}
-input,select,textarea,button{font-family:inherit;-webkit-appearance:none;appearance:none;}
-html{font-size:62.5%;overscroll-behavior:none;-webkit-text-size-adjust:100%;}
-body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size:1.4rem;background:linear-gradient(135deg,#1a6b3c 0%,#0d4f8c 100%);width:100%;height:100dvh;overflow:hidden;position:relative;-webkit-font-smoothing:antialiased;}
-*::-webkit-scrollbar{display:none;}
-:root{
-  --green-mid:#25a55a;--blue-mid:#1976d2;--blue-light:#42a5f5;--teal:#00bcd4;
-  --yellow:#ffd740;--red:#f44336;--orange:#ff9800;
-  --text-dark:#1a1a2e;--text-mid:#37474f;
-  --tab-h:7rem;--h-inp:4.4rem;--h-btn:4.8rem;--r:.8rem;
-  --fs-xs:1.1rem;--fs-sm:1.25rem;--fs-md:1.4rem;--fs-lg:1.7rem;
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:root {
+  --bg:#8CABD0; --green:#6DBF72;
+  --chip-sel:#2D3A4A; --chip-off:#A8C5E0;
+  --record-btn:#D164A4; --reserve-btn:#1A237E; --save-btn:#1D4ED8;
+  --home-red:#A61D24; --tab-bg:#1A2332;
+  --teal:#26C6DA; --detail-bg:#4BBBC6;
+  --text:#1A2332; --white:#fff;
+}
+body {
+  font-family:'Hiragino Sans','Noto Sans JP',sans-serif;
+  background:var(--bg); width:375px; height:667px;
+  overflow:hidden; position:relative; margin:0 auto;
+}
+*::-webkit-scrollbar { display:none; }
 
-  /* ブロック別ヘッダー色 */
-  --hdr-red:   #e53935;
-  --hdr-yellow:#f57f17;
-  --hdr-blue:  #1565c0;
-  --hdr-green: #00F562;   /* 詳細情報ヘッダー */
-  --hdr-orange:#e65100;   /* 商品情報ヘッダー */
+/* ===== TAB BAR ===== */
+.tab-bar {
+  position:absolute; bottom:0; left:0; right:0; height:60px;
+  background:var(--tab-bg); display:flex; z-index:100;
+}
+.tab-btn {
+  flex:1; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:3px; cursor:pointer; color:#556;
+  font-size:11px; border:none; background:none; transition:color .2s;
+}
+.tab-btn.active { color:var(--white); }
+.tab-icon { font-size:22px; }
 
-  /* ブロック別背景色（ヘッダー色の薄版・最下層） */
-  --bg-red:    #fff5f5;
-  --bg-yellow: #fffbf0;
-  --bg-blue:   #f0f6ff;
-  --bg-green:  #f0fff6;
-  --bg-orange: #fff8f0;
+/* ===== SCREENS ===== */
+.screen {
+  position:absolute; top:0; left:0; right:0; bottom:60px;
+  overflow-y:auto; overflow-x:hidden; display:none;
+  padding:12px; padding-bottom:16px;
+}
+.screen.active { display:block; }
+
+/* ===== LOADING OVERLAY ===== */
+.loading-ov {
+  display:none; position:fixed; top:0; left:0; right:0; bottom:0;
+  background:rgba(0,0,0,.55); z-index:500;
+  justify-content:center; align-items:center;
+  flex-direction:column; gap:14px; width:375px; margin:0 auto;
+}
+.loading-ov.show { display:flex; }
+.loading-spinner {
+  width:48px; height:48px; border:5px solid rgba(255,255,255,.3);
+  border-top-color:#fff; border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+.loading-msg { color:#fff; font-size:14px; font-weight:700; }
+
+/* ===== RECORD SCREEN ===== */
+.appt-box {
+  background:var(--white); border:3px solid var(--home-red);
+  border-radius:16px; padding:12px 16px; margin-bottom:12px; text-align:center;
+}
+.appt-label { font-size:12px; color:#888; margin-bottom:4px; }
+.appt-value { font-size:16px; font-weight:900; color:var(--home-red); line-height:1.5; }
+.sec-label {
+  text-align:center; font-size:12px; color:var(--text);
+  margin:8px 0 6px; font-weight:600; opacity:.65;
+}
+.g-card { background:var(--green); border-radius:14px; padding:12px 14px; margin-bottom:8px; }
+.g-row { display:flex; gap:8px; }
+.g-half { flex:1; background:var(--green); border-radius:14px; padding:10px 12px; margin-bottom:8px; }
+.g-lbl { font-size:11px; color:rgba(0,0,0,.55); margin-bottom:5px; text-align:center; }
+
+/* 診察日 */
+.date-field { background:var(--green); border-radius:14px; padding:12px 14px; margin-bottom:8px; text-align:center; }
+.date-val { font-size:17px; font-weight:700; color:var(--text); display:flex; align-items:center; justify-content:center; gap:8px; }
+.date-native {
+  position:relative; display:inline-flex; align-items:center;
+  background:rgba(255,255,255,.4); border-radius:10px; padding:4px 10px; cursor:pointer;
+}
+.date-native input[type="date"] {
+  border:none; background:transparent; font-size:15px; font-weight:700;
+  font-family:inherit; color:var(--text); outline:none; cursor:pointer; width:160px;
+}
+.date-native input[type="date"]::-webkit-calendar-picker-indicator { cursor:pointer; font-size:18px; }
+
+/* CHIPS */
+.chip-grp { display:flex; gap:6px; }
+.chip {
+  flex:1; padding:8px 4px; border-radius:20px; border:none; cursor:pointer;
+  font-size:14px; font-weight:700; background:var(--chip-off); color:var(--text); transition:all .15s;
+}
+.chip.sel { background:var(--chip-sel); color:var(--white); }
+.chip4 { font-size:13px; }
+
+/* SELECTORS */
+.sel-tap {
+  background:rgba(255,255,255,.4); border-radius:20px; padding:8px 14px;
+  color:var(--text); font-weight:600; font-size:14px; cursor:pointer;
+  display:flex; align-items:center; justify-content:space-between; width:100%; border:none; text-align:left;
 }
 
-/* ── LOADING ── */
-.loading-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999;flex-direction:column;align-items:center;justify-content:center;gap:1.2rem;}
-.loading-ov.show{display:flex;}
-.spinner{width:4rem;height:4rem;border:.4rem solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg);}}
-.loading-msg{color:#fff;font-size:var(--fs-md);font-weight:700;}
-
-/* ── TOAST ── */
-.toast{display:none;position:fixed;top:1.6rem;left:50%;transform:translateX(-50%);z-index:998;padding:.8rem 2rem;border-radius:2rem;font-size:var(--fs-sm);font-weight:700;color:#fff;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.3);background:var(--green-mid);}
-.toast.err{background:var(--red);}
-.toast.show{display:block;animation:fadeInOut 2.5s ease forwards;}
-@keyframes fadeInOut{0%{opacity:0;transform:translateX(-50%) translateY(-8px);}15%{opacity:1;transform:translateX(-50%) translateY(0);}75%{opacity:1;}100%{opacity:0;}}
-
-/* ── DIALOG ── */
-.dialog-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:900;align-items:center;justify-content:center;padding:0 1.6rem;}
-.dialog-ov.open{display:flex;}
-.dialog-box{background:#fff;border-radius:1.6rem;padding:2.4rem 2rem 2rem;width:100%;max-width:40rem;box-shadow:0 8px 32px rgba(0,0,0,.3);}
-.dialog-title{font-size:var(--fs-lg);font-weight:800;color:var(--text-dark);margin-bottom:1rem;text-align:center;}
-.dialog-msg{font-size:var(--fs-md);color:var(--text-mid);margin-bottom:1.6rem;line-height:1.6;text-align:center;white-space:pre-wrap;}
-.dialog-btns{display:flex;gap:1rem;}
-.dialog-cancel{flex:1;border-radius:var(--r);cursor:pointer;font-weight:700;background:#fff;border:.2rem solid var(--red);color:var(--red);font-size:var(--fs-md);height:var(--h-btn);}
-.dialog-ok{flex:1;border-radius:var(--r);cursor:pointer;font-weight:700;background:var(--blue-mid);border:none;color:#fff;font-size:var(--fs-md);height:var(--h-btn);}
-
-/* ── SCAN ── */
-.scan-ov{display:none;position:fixed;inset:0;background:#000;z-index:800;flex-direction:column;align-items:center;justify-content:center;}
-.scan-ov.open{display:flex;}
-.scan-wrap{position:relative;width:100%;max-width:48rem;}
-#scan-video{width:100%;display:block;}
-.scan-guide{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:70%;height:12rem;border:.3rem solid var(--yellow);border-radius:.8rem;box-shadow:0 0 0 999px rgba(0,0,0,.45);}
-.scan-line{position:absolute;top:0;left:0;right:0;height:.3rem;background:var(--yellow);animation:scanLine 2s ease-in-out infinite;}
-@keyframes scanLine{0%{top:0;}50%{top:calc(100% - .3rem);}100%{top:0;}}
-.scan-label{color:#fff;font-size:var(--fs-md);font-weight:700;margin-top:2rem;text-align:center;}
-.scan-cancel{margin-top:2rem;padding:1rem 3rem;background:rgba(255,255,255,.15);border:.2rem solid rgba(255,255,255,.5);border-radius:2rem;color:#fff;font-size:var(--fs-md);font-weight:700;cursor:pointer;}
-
-/* ── TAB ── */
-.tab-bar{position:absolute;bottom:0;left:0;right:0;height:var(--tab-h);background:rgba(13,79,140,.97);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -2px 12px rgba(0,0,0,.25);}
-.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3rem;cursor:pointer;border:none;background:none;padding:0;color:rgba(255,255,255,.5);border-top:.3rem solid transparent;}
-.tab-btn.active{color:#fff;border-top-color:var(--yellow);}
-.tab-icon{font-size:2.4rem;line-height:1;}
-.tab-label{font-size:var(--fs-xs);font-weight:700;}
-
-/* ── SCREENS ── */
-.screen{position:absolute;top:0;left:0;right:0;bottom:var(--tab-h);overflow-y:auto;overflow-x:hidden;display:none;padding:.8rem .8rem 2rem;overscroll-behavior:none;-webkit-overflow-scrolling:touch;}
-.screen.active{display:block;}
-.page-title{text-align:center;font-size:var(--fs-lg);font-weight:800;color:#fff;margin-bottom:.8rem;}
-
-/* ── ブロックカード（背景色は各ブロック別に最下層で設定） ── */
-.block-card{border-radius:1.2rem;padding:1rem;margin-bottom:.8rem;box-shadow:0 2px 8px rgba(0,0,0,.12);position:relative;}
-/* 背景色レイヤー（最下層） */
-.block-card::before{content:'';position:absolute;inset:0;border-radius:1.2rem;z-index:0;}
-.block-card>*{position:relative;z-index:1;}
-
-/* A: 検索ブロック → 薄い赤背景 */
-.card-red::before{background:var(--bg-red);}
-/* B: 商品情報ブロック → 薄いオレンジ背景 */
-.card-orange::before{background:var(--bg-orange);}
-/* C: 発送処理ブロック → 薄い青背景 */
-.card-blue::before{background:var(--bg-blue);}
-/* D: 詳細情報ブロック → 薄い緑背景 */
-.card-green::before{background:var(--bg-green);}
-
-/* ブロックタイトル */
-.block-title{font-size:var(--fs-sm);font-weight:800;padding:.3rem .9rem;border-radius:.5rem;margin-bottom:.8rem;display:inline-block;}
-.bt-red   {background:var(--hdr-red);   color:#fff;}
-.bt-orange{background:var(--hdr-orange);color:#fff;}
-.bt-blue  {background:var(--hdr-blue);  color:#fff;}
-.bt-green {background:var(--hdr-green); color:#1a1a2e;} /* 黒文字 */
-
-/* ── 共通ボタン・入力 ── */
-.inp{width:100%;background:#fff;border:.15rem solid #cfd8dc;border-radius:var(--r);padding:0 1rem;color:var(--text-dark);outline:none;font-size:var(--fs-md);font-weight:600;height:var(--h-inp);}
-.inp:focus{border-color:var(--blue-mid);}
-.sel-btn{width:100%;background:#fff;border:.15rem solid #cfd8dc;border-radius:var(--r);padding:0 1rem;color:var(--text-dark);cursor:pointer;font-size:var(--fs-md);font-weight:600;height:var(--h-inp);display:flex;align-items:center;justify-content:space-between;}
-.big-btn{width:100%;border-radius:var(--r);border:none;cursor:pointer;font-weight:800;color:#fff;height:var(--h-btn);font-size:var(--fs-md);display:flex;align-items:center;justify-content:center;gap:.4rem;box-shadow:0 2px 8px rgba(0,0,0,.2);}
-.big-btn:active{opacity:.8;}
-.btn-scan  {background:linear-gradient(90deg,var(--green-mid),var(--teal));}
-.btn-save  {background:linear-gradient(90deg,var(--blue-mid),var(--blue-light));}
-.btn-clear {background:linear-gradient(90deg,#78909c,#90a4ae);}
-.btn-danger{background:linear-gradient(90deg,var(--red),var(--orange));}
-.btn-search{background:linear-gradient(90deg,var(--blue-mid),var(--blue-light));}
-.btn-row{display:flex;gap:.8rem;margin-bottom:.8rem;}
-.btn-row .big-btn{flex:1;}
-
-/* ── A: 検索ブロック ── */
-.search-block{display:flex;gap:.6rem;align-items:stretch;}
-.scan-col{flex:0 0 9rem;}
-.scan-col .big-btn{height:100%;min-height:calc(var(--h-inp)*2 + .4rem);flex-direction:column;gap:.3rem;font-size:var(--fs-sm);line-height:1.3;}
-.search-right{flex:1;display:flex;flex-direction:column;gap:.4rem;}
-.search-right .inp{height:var(--h-inp);}
-.search-right .btn-search{height:var(--h-inp);font-size:var(--fs-sm);}
-
-/* ① テキスト中央寄せ（search-inputのplaceholderとvalue） */
-#search-input{text-align:center;}
-
-/* ── B: 商品情報ブロック ── */
-.product-layout{display:flex;gap:.8rem;align-items:flex-start;}
-.product-img-col{flex:0 0 13rem;}
-.product-img{width:13rem;height:13rem;border-radius:var(--r);object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,.15);background:#f5f5f5;display:block;}
-.no-img{width:13rem;height:13rem;background:#eceff1;border-radius:var(--r);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#90a4ae;font-size:1.2rem;gap:.3rem;}
-.product-info-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:.4rem;}
-.info-row{display:grid;grid-template-columns:5rem 1fr;align-items:baseline;gap:.3rem;}
-.info-lbl{font-size:var(--fs-xs);font-weight:700;color:var(--hdr-orange);white-space:nowrap;}
-.info-val{font-size:var(--fs-sm);font-weight:700;color:var(--text-dark);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-
-/* ── C: 発送処理ブロック ── */
-.c-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem;}
-.c-lbl{font-size:var(--fs-sm);font-weight:700;color:var(--hdr-blue);white-space:nowrap;flex:0 0 5.5rem;}
-.c-val{flex:1;}
-
-/* ② 現在のステータスボタン → 販売済日・販売金額と同じ高さに統一 */
-.cur-status-btn{
-  width:100%;height:4rem;border-radius:var(--r);border:none;
-  font-size:var(--fs-md);font-weight:800;cursor:default;
-  background:linear-gradient(90deg,#1565c0,#1976d2);color:#fff;
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 2px 6px rgba(0,0,0,.2);letter-spacing:.05em;
+/* 金額入力 */
+.fee-wrap {
+  display:flex; align-items:center;
+  background:rgba(255,255,255,.5); border-radius:10px; overflow:hidden;
 }
-.chip-grp{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.5rem;}
-.chip{padding:.35rem .9rem;border-radius:2rem;border:.15rem solid #cfd8dc;cursor:pointer;font-size:var(--fs-sm);font-weight:700;background:#fff;color:var(--text-mid);white-space:nowrap;}
-.chip.sel{background:var(--blue-mid);color:#fff;border-color:var(--blue-mid);}
-.divider{height:.1rem;background:#cfd8dc;margin:.5rem 0;}
-
-/* 販売済日・販売金額：1行表示 高さ統一 4rem */
-.edit-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;}
-.edit-lbl{font-size:var(--fs-sm);font-weight:700;color:var(--hdr-blue);white-space:nowrap;flex:0 0 5.5rem;}
-.edit-inp{flex:1;background:#fff;border:.15rem solid #cfd8dc;border-radius:var(--r);padding:0 .8rem;color:var(--text-dark);outline:none;font-size:var(--fs-md);font-weight:600;height:4rem;}
-.edit-inp:focus{border-color:var(--blue-mid);}
-
-/* ③④ ¥とテキストのズレ修正：flexで完全に垂直中央揃え */
-.price-wrap{
-  flex:1;display:flex;align-items:center;
-  background:#fff;border:.15rem solid #cfd8dc;border-radius:var(--r);
-  height:4rem;overflow:hidden;
+.fee-yen { padding:10px 6px 10px 12px; font-size:16px; font-weight:700; color:var(--text); flex-shrink:0; user-select:none; }
+.fee-inp {
+  flex:1; border:none; background:transparent; padding:10px 8px;
+  font-size:15px; font-family:inherit; color:var(--text); outline:none; width:0;
 }
-.price-prefix{
-  flex:0 0 auto;
-  padding:0 .1rem 0 .8rem;
-  font-size:var(--fs-md);font-weight:700;
-  color:var(--text-dark);
-  line-height:1;
-  display:flex;align-items:center;
+.total-box {
+  background:rgba(255,255,255,.55); border-radius:14px; padding:10px 14px; margin-bottom:8px;
 }
-.price-inp{
-  flex:1;border:none;background:transparent;
-  padding:0 .8rem 0 .2rem;
-  color:var(--text-dark);font-size:var(--fs-md);font-weight:600;
-  height:100%;outline:none;
-  display:flex;align-items:center;
+.total-top { font-size:11px; color:rgba(0,0,0,.5); font-weight:600; }
+.total-sub { font-size:10px; color:rgba(0,0,0,.4); }
+.total-val { font-size:20px; font-weight:900; color:#C0392B; text-align:right; }
+.drug-stepper {
+  display:flex; align-items:center; justify-content:center; gap:14px;
+  background:rgba(255,255,255,.4); border-radius:10px; padding:8px;
+}
+.stepper-btn {
+  width:32px; height:32px; border-radius:50%; border:none; cursor:pointer;
+  font-size:20px; font-weight:900; background:var(--chip-sel); color:var(--white);
+  display:flex; align-items:center; justify-content:center; transition:opacity .15s;
+}
+.stepper-btn:active { opacity:.7; }
+.stepper-val { font-size:18px; font-weight:800; color:var(--text); min-width:28px; text-align:center; }
+.n-input {
+  background:rgba(255,255,255,.5); border:none; border-radius:10px;
+  padding:10px 12px; width:100%; font-size:15px; font-family:inherit; color:var(--text); outline:none;
 }
 
-/* ── D: 詳細情報ブロック ── */
-/* ⑤ フォント統一 */
-.detail-grid{display:grid;grid-template-columns:5.5rem 1fr;gap:.45rem .5rem;align-items:baseline;}
-.d-lbl{font-size:var(--fs-xs);font-weight:700;color:#00994a;white-space:nowrap;}
-.d-val{font-size:var(--fs-sm);font-weight:700;color:var(--text-dark);word-break:break-all;}
+/* ⑧ 画像添付ボタン（診察代金・薬料金ラベル付き） */
+.img-btn {
+  flex:1; background:rgba(255,255,255,.3); border:2px dashed rgba(0,0,0,.2);
+  border-radius:10px; padding:14px 8px; cursor:pointer; text-align:center;
+  font-size:20px; color:rgba(0,0,0,.35); transition:background .15s; position:relative;
+}
+.img-btn .img-hint { font-size:10px; display:block; margin-top:4px; color:rgba(0,0,0,.5); font-weight:600; }
+.img-upload-progress {
+  position:absolute; bottom:4px; left:4px; right:4px; height:3px;
+  background:rgba(0,0,0,.1); border-radius:2px; overflow:hidden; display:none;
+}
+.img-upload-progress.show { display:block; }
+.img-upload-bar { height:100%; background:var(--save-btn); width:0; transition:width .3s; }
 
-/* ── 空状態 ── */
-#ship-empty{text-align:center;padding:2.5rem 1rem;color:rgba(255,255,255,.7);font-size:var(--fs-md);line-height:1.8;}
-#ship-empty .empty-icon{font-size:4rem;margin-bottom:1rem;}
+.big-btn {
+  width:100%; padding:14px; border-radius:14px; border:none; cursor:pointer;
+  font-size:15px; font-weight:800; color:var(--white); margin-bottom:8px; transition:opacity .2s;
+}
+.big-btn:active { opacity:.8; }
+.btn-rec { background:var(--record-btn); }
+.btn-res { background:var(--reserve-btn); }
+.fee-sec { text-align:center; font-size:12px; color:rgba(0,0,0,.45); margin:4px 0 6px; }
 
-/* ── 一括編集 ── */
-.bulk-item{background:rgba(255,255,255,.95);border-radius:var(--r);padding:.7rem 1rem;margin-bottom:.5rem;display:flex;align-items:center;gap:.8rem;box-shadow:0 1px 4px rgba(0,0,0,.1);}
-.bulk-item-no{width:2.4rem;height:2.4rem;border-radius:50%;background:var(--blue-mid);color:#fff;font-size:var(--fs-xs);font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.bulk-item-info{flex:1;min-width:0;}
-.bulk-item-name{font-size:var(--fs-sm);font-weight:700;color:var(--text-dark);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.bulk-item-sub{font-size:var(--fs-xs);color:#78909c;margin-top:.2rem;}
-.bulk-item-del{width:3rem;height:3rem;border-radius:50%;background:var(--red);color:#fff;border:none;cursor:pointer;font-size:1.6rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.bulk-count{text-align:center;font-size:var(--fs-sm);font-weight:700;color:rgba(255,255,255,.8);margin-bottom:.6rem;}
-.bulk-form-section{background:rgba(255,255,255,.15);border-radius:1.2rem;padding:1rem;margin-bottom:.8rem;border:.1rem solid rgba(255,255,255,.2);}
-.bulk-form-title{font-size:var(--fs-sm);font-weight:800;color:#fff;margin-bottom:.6rem;}
-.form-row{margin-bottom:.7rem;}
-.form-label{font-size:var(--fs-xs);font-weight:700;color:rgba(255,255,255,.9);margin-bottom:.3rem;}
+/* ===== HISTORY SCREEN ===== */
+.h-tabs {
+  display:flex; background:rgba(255,255,255,.15); border-radius:12px; padding:4px; margin-bottom:12px;
+}
+.htab {
+  flex:1; padding:8px; border-radius:9px; border:none; cursor:pointer;
+  font-size:12px; font-weight:700; background:transparent; color:rgba(255,255,255,.55); transition:all .2s;
+}
+.htab.active { background:var(--save-btn); color:var(--white); }
 
-/* ── ポップアップ ── */
-.popup-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:850;align-items:flex-end;justify-content:center;}
-.popup-ov.open{display:flex;}
-.popup-sheet{background:#fff;border-radius:1.6rem 1.6rem 0 0;width:100%;max-width:48rem;max-height:70vh;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom);}
-.popup-head{padding:1.2rem 1.6rem .8rem;display:flex;align-items:center;justify-content:space-between;border-bottom:.1rem solid #e0e0e0;}
-.popup-title{font-size:var(--fs-md);font-weight:800;color:var(--text-dark);}
-.popup-close{width:3rem;height:3rem;border-radius:50%;background:#eceff1;border:none;cursor:pointer;font-size:1.8rem;display:flex;align-items:center;justify-content:center;}
-.popup-list{overflow-y:auto;flex:1;padding:.4rem 0;}
-.popup-item{padding:1rem 1.6rem;font-size:var(--fs-md);cursor:pointer;color:var(--text-dark);font-weight:600;border-bottom:.1rem solid #f5f5f5;}
-.popup-item:active{background:#e3f2fd;}
-.popup-item.selected{color:var(--blue-mid);font-weight:800;}
+.breadcrumb {
+  font-size:12px; color:rgba(255,255,255,.65); margin-bottom:10px;
+  display:flex; align-items:center; gap:3px; flex-wrap:wrap;
+}
+.bc-link { color:var(--white); font-weight:700; cursor:pointer; text-decoration:underline; }
+.bc-sep { opacity:.5; }
+
+/* ② 年カード - コンパクトサイズ */
+.yr-card {
+  background:rgba(255,255,255,.2); border-radius:10px;
+  padding:7px 12px; margin-bottom:5px; cursor:pointer; transition:background .15s;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.yr-card:active { background:rgba(255,255,255,.32); }
+.yr-title { font-size:13px; font-weight:800; color:var(--white); }
+.yr-sub { font-size:12px; color:rgba(255,255,255,.65); }
+
+/* month grid */
+.mo-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:12px; }
+.mo-cell { background:rgba(255,255,255,.12); border-radius:12px; padding:10px 4px; text-align:center; cursor:default; transition:background .15s; }
+.mo-cell.has-data { background:rgba(255,255,255,.25); cursor:pointer; }
+.mo-cell.has-data:active { background:rgba(255,255,255,.38); }
+.mo-name { font-size:14px; color:rgba(255,255,255,.35); }
+.mo-cell.has-data .mo-name { font-weight:800; color:var(--white); }
+.mo-info { font-size:10px; color:rgba(255,255,255,.55); margin-top:2px; }
+
+.day-group { margin-bottom:10px; }
+.day-header {
+  font-size:14px; font-weight:800; color:var(--white); margin-bottom:6px;
+  padding:6px 10px; background:rgba(0,0,0,.15); border-radius:10px;
+}
+.rec-item {
+  background:var(--green); border-radius:14px; padding:12px 14px; margin-bottom:8px; cursor:pointer; transition:opacity .15s;
+}
+.rec-item:active { opacity:.75; }
+.rec-head { display:flex; justify-content:space-between; margin-bottom:3px; }
+.rec-date { font-size:13px; font-weight:700; color:var(--text); }
+.rec-amt { font-size:14px; font-weight:700; color:var(--text); }
+.rec-hosp { font-size:13px; color:rgba(0,0,0,.65); margin-bottom:5px; }
+.badge-row { display:flex; gap:4px; flex-wrap:wrap; }
+.badge { padding:2px 7px; border-radius:10px; font-size:11px; font-weight:700; border:1.5px solid rgba(0,0,0,.12); }
+.b-mr { background:#B3E5FC; color:#01579B; }
+.b-ct { background:#C8E6C9; color:#1B5E20; }
+.b-xp { background:#FFF9C4; color:#F57F17; }
+.b-blood { background:#FCE4EC; color:#880E4F; }
+.b-add { background:#fff; color:#333; }
+.b-med { background:#1565C0; color:#fff; }
+.b-diag { background:#E65100; color:#fff; }
+
+/* summary bar */
+.sum-bar {
+  position:sticky; bottom:0; background:var(--tab-bg); border-radius:14px 14px 0 0;
+  padding:12px 16px; display:flex; justify-content:space-around; margin:0 -12px -16px;
+}
+.sum-cell { text-align:center; }
+.sum-lbl { font-size:10px; color:rgba(255,255,255,.5); }
+.sum-val { font-size:13px; font-weight:800; color:#FFD700; margin-top:2px; }
+
+.pdf-btn {
+  width:100%; padding:12px; border:2px solid #FFD700; border-radius:12px;
+  background:transparent; color:#FFD700; font-size:14px; font-weight:700;
+  cursor:pointer; margin-bottom:10px; transition:background .15s;
+}
+.pdf-btn:active { background:rgba(255,215,0,.1); }
+
+.dept-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px; }
+.dept-card {
+  background:rgba(255,255,255,.18); border-radius:14px; padding:14px 8px;
+  text-align:center; cursor:pointer; transition:background .15s;
+}
+.dept-card:active { background:rgba(255,255,255,.3); }
+.dept-nm { font-size:13px; font-weight:700; color:var(--white); }
+.dept-cnt { font-size:11px; color:rgba(255,255,255,.5); margin-top:2px; }
+.hosp-pill {
+  display:inline-block; background:rgba(255,255,255,.2); border-radius:14px;
+  padding:12px 16px; margin:0 6px 8px 0; font-size:14px; font-weight:700;
+  color:var(--white); cursor:pointer; transition:background .15s;
+}
+.hosp-pill:active { background:rgba(255,255,255,.35); }
+
+.today-lbl {
+  text-align:center; font-size:14px; font-weight:800; color:#FFD700;
+  padding:6px; border-radius:8px; background:rgba(255,215,0,.1); margin-bottom:10px;
+}
+.res-item {
+  border-radius:12px; padding:12px 14px; margin-bottom:8px; cursor:pointer;
+  transition:opacity .15s; display:flex; align-items:center; gap:10px;
+}
+.res-item:active { opacity:.75; }
+.res-item.has-detail { background:var(--white); }
+.res-item.no-detail { background:#8a8a8a; cursor:default; }
+.res-item.no-detail:active { opacity:1; }
+.res-icon { font-size:18px; flex-shrink:0; }
+.res-body { flex:1; }
+.res-dt { font-size:14px; font-weight:700; }
+.res-item.has-detail .res-dt { color:var(--text); }
+.res-item.no-detail .res-dt { color:#ddd; }
+.res-hp { font-size:12px; margin-top:3px; }
+.res-item.has-detail .res-hp { color:#666; }
+.res-item.no-detail .res-hp { color:#bbb; }
+.add-res-btn {
+  width:100%; padding:13px; border-radius:12px; border:2px solid var(--teal);
+  background:transparent; color:var(--teal); font-size:14px; font-weight:700;
+  cursor:pointer; margin-bottom:8px;
+}
+.show-past-btn {
+  width:100%; padding:13px; border-radius:12px; border:2px solid var(--record-btn);
+  background:transparent; color:var(--record-btn); font-size:14px; font-weight:700; cursor:pointer;
+}
+
+/* ===== DETAIL SCREEN ===== */
+.detail-screen {
+  display:none; position:absolute; top:0; left:0; right:0; bottom:60px;
+  background:var(--detail-bg); overflow-y:auto; z-index:50;
+}
+.detail-screen.open { display:block; }
+.detail-hdr {
+  background:var(--teal); padding:14px 16px; display:flex;
+  align-items:center; gap:12px; position:sticky; top:0; z-index:10;
+}
+.detail-back { background:none; border:none; color:var(--white); font-size:15px; font-weight:700; cursor:pointer; }
+.detail-badge {
+  background:rgba(255,255,255,.2); border-radius:20px; padding:4px 12px;
+  font-size:13px; font-weight:700; color:var(--white);
+}
+.d-card { background:var(--white); border-radius:14px; padding:14px 16px; margin:8px 12px; }
+.d-lbl { font-size:12px; color:#888; text-align:center; margin-bottom:4px; }
+.d-val { font-size:18px; font-weight:700; color:var(--text); text-align:center; }
+.fee-card { background:var(--tab-bg); border-radius:14px; padding:16px; margin:8px 12px; }
+.fee-row { display:flex; justify-content:space-between; margin-bottom:8px; color:rgba(255,255,255,.7); font-size:14px; }
+.fee-total { display:flex; justify-content:space-between; padding-top:10px; border-top:1px solid rgba(255,255,255,.15); font-size:16px; font-weight:800; color:var(--white); }
+.fee-total-v { color:#FFD700; }
+.d-actions { display:flex; gap:8px; padding:12px; }
+.act-btn { flex:1; padding:12px; border-radius:12px; border:none; cursor:pointer; font-size:14px; font-weight:700; color:var(--white); transition:opacity .15s; }
+.act-btn:active { opacity:.8; }
+.btn-edit { background:var(--save-btn); }
+.btn-del { background:#E53935; }
+.btn-copy { background:#455A64; }
+
+/* ===== MODAL ===== */
+/* ① 予約モーダルより上になるよう z-index を分離 */
+.modal-ov {
+  display:none; position:fixed; top:0; left:0; right:0; bottom:0;
+  background:rgba(0,0,0,.6); justify-content:center;
+  align-items:flex-end; width:375px; margin:0 auto;
+}
+.modal-ov.open { display:flex; }
+/* リストモーダルは常に最前面 */
+#modal-list { z-index:400; }
+/* 予約モーダルはその下 */
+#modal-reserve { z-index:300; }
+
+.modal-sheet {
+  background:#1A2332; border-radius:20px 20px 0 0; width:100%;
+  padding:20px 16px 36px; max-height:80vh; overflow-y:auto;
+}
+.modal-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+.modal-title { font-size:16px; font-weight:800; color:var(--white); }
+.modal-x { background:none; border:none; color:#888; font-size:20px; cursor:pointer; }
+.modal-item {
+  padding:16px 12px; border-bottom:1px solid rgba(255,255,255,.07);
+  color:var(--white); font-size:15px; cursor:pointer; border-radius:8px; transition:background .12s;
+}
+.modal-item:active { background:rgba(255,255,255,.1); }
+.modal-add { padding:16px 12px; color:var(--teal); font-size:15px; font-weight:700; cursor:pointer; }
+.f-grp { margin-bottom:14px; }
+.f-lbl { font-size:12px; color:rgba(255,255,255,.5); margin-bottom:6px; }
+.f-inp {
+  width:100%; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2);
+  border-radius:10px; padding:12px; color:var(--white); font-size:15px; font-family:inherit; outline:none;
+}
+.f-inp::placeholder { color:rgba(255,255,255,.3); }
+.f-sel-btn {
+  background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2);
+  border-radius:10px; padding:12px; color:var(--white); font-size:15px;
+  width:100%; text-align:left; cursor:pointer; display:flex; align-items:center; justify-content:space-between;
+}
+
+/* TOAST */
+.toast {
+  position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-90px);
+  background:#2E7D32; color:var(--white); padding:12px 24px; border-radius:20px;
+  font-weight:700; font-size:14px; z-index:600; transition:transform .3s; white-space:nowrap;
+}
+.toast.show { transform:translateX(-50%) translateY(0); }
+.toast.error { background:#C62828; }
+.toast.info  { background:#1565C0; }
+
+/* ===== EDIT SCREEN ===== */
+.edit-screen {
+  display:none; position:absolute; top:0; left:0; right:0; bottom:60px;
+  background:#1A2332; overflow-y:auto; z-index:80;
+}
+.edit-screen.open { display:block; }
+.edit-hdr {
+  background:#243044; padding:14px 16px; display:flex;
+  align-items:center; gap:12px; position:sticky; top:0; z-index:10;
+}
+.edit-hdr-title { font-size:16px; font-weight:800; color:var(--white); flex:1; }
+.edit-body { padding:16px; }
+.edit-sec { margin-bottom:16px; }
+.edit-sec-lbl { font-size:12px; color:rgba(255,255,255,.5); margin-bottom:8px; }
+.edit-chip-grp { display:flex; gap:6px; }
+.edit-chip {
+  flex:1; padding:9px 4px; border-radius:20px; border:none; cursor:pointer;
+  font-size:13px; font-weight:700; background:rgba(255,255,255,.12); color:rgba(255,255,255,.6); transition:all .15s;
+}
+.edit-chip.sel { background:#1D4ED8; color:var(--white); }
+.edit-inp {
+  width:100%; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2);
+  border-radius:10px; padding:12px; color:var(--white); font-size:15px; font-family:inherit; outline:none;
+}
+.edit-sel-btn {
+  background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2);
+  border-radius:10px; padding:12px; color:var(--white); font-size:15px;
+  width:100%; text-align:left; cursor:pointer; display:flex; align-items:center; justify-content:space-between;
+}
+.edit-fee-wrap {
+  display:flex; align-items:center;
+  background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:10px; overflow:hidden;
+}
+.edit-fee-yen { padding:12px 6px 12px 12px; font-size:16px; font-weight:700; color:rgba(255,255,255,.7); flex-shrink:0; }
+.edit-fee-inp {
+  flex:1; border:none; background:transparent; padding:12px 8px;
+  font-size:15px; font-family:inherit; color:var(--white); outline:none; width:0;
+}
 </style>
 </head>
 <body>
 
-<!-- ローディング -->
-<div class="loading-ov" id="loading-ov"><div class="spinner"></div><div class="loading-msg" id="loading-msg">読み込み中...</div></div>
-<!-- トースト -->
+<!-- ローディングオーバーレイ -->
+<div class="loading-ov" id="loading-ov">
+  <div class="loading-spinner"></div>
+  <div class="loading-msg" id="loading-msg">読み込み中...</div>
+</div>
+
 <div class="toast" id="toast"></div>
-<!-- ダイアログ -->
-<div class="dialog-ov" id="dialog-ov">
-  <div class="dialog-box">
-    <div class="dialog-title" id="dialog-title"></div>
-    <div class="dialog-msg" id="dialog-msg"></div>
-    <div class="dialog-btns">
-      <button class="dialog-cancel" id="dialog-cancel" style="display:none">キャンセル</button>
-      <button class="dialog-ok" id="dialog-ok">OK</button>
-    </div>
-  </div>
-</div>
-<!-- カメラスキャン -->
-<div class="scan-ov" id="scan-ov">
-  <div class="scan-wrap">
-    <video id="scan-video" playsinline autoplay muted></video>
-    <div class="scan-guide"><div class="scan-line"></div></div>
-  </div>
-  <div class="scan-label">バーコードをガイド枠に合わせてください</div>
-  <button class="scan-cancel" onclick="stopScan()">キャンセル</button>
-</div>
-<!-- ポップアップ -->
-<div class="popup-ov" id="popup-ov">
-  <div class="popup-sheet">
-    <div class="popup-head">
-      <div class="popup-title" id="popup-title">選択</div>
-      <button class="popup-close" onclick="closePopup()">✕</button>
-    </div>
-    <div class="popup-list" id="popup-list"></div>
-  </div>
-</div>
 
-<!-- ════════════════════════════════
-     TAB1: 発送作業
-════════════════════════════════ -->
-<div class="screen active" id="screen-ship">
-  <div class="page-title">🚚 発送作業</div>
+<!-- ========== RECORD SCREEN ========== -->
+<div class="screen active" id="screen-record">
+  <div class="appt-box">
+    <div class="appt-label">次回予約</div>
+    <div class="appt-value" id="next-appt">予約なし</div>
+  </div>
 
-  <!-- A: 検索ブロック（薄い赤背景） -->
-  <div class="block-card card-red">
-    <span class="block-title bt-red">🔍 検索</span>
-    <div class="search-block">
-      <div class="scan-col">
-        <button class="big-btn btn-scan" onclick="startScan('ship')">📷<br>スキャン</button>
-      </div>
-      <div class="search-right">
-        <input type="text" class="inp" id="search-input" placeholder="バーコード / 商品NO" inputmode="text">
-        <button class="big-btn btn-search" onclick="searchManual()">🔍 検索</button>
+  <div class="sec-label">基本情報</div>
+
+  <div class="date-field">
+    <div class="g-lbl">📅 診察日（必須）</div>
+    <div class="date-val">
+      <div class="date-native">
+        <input type="date" id="dp">
       </div>
     </div>
   </div>
 
-  <!-- 空状態 -->
-  <div id="ship-empty">
-    <div class="empty-icon">📦</div>
-    バーコードをスキャンまたは<br>商品NOを入力して検索してください
-  </div>
-
-  <!-- 商品詳細（スキャン後表示） -->
-  <div id="ship-detail" style="display:none">
-
-    <!-- B: 商品情報ブロック（薄いオレンジ背景） -->
-    <div class="block-card card-orange">
-      <span class="block-title bt-orange">📦 商品情報</span>
-      <div class="product-layout">
-        <div class="product-img-col">
-          <img id="ship-img" class="product-img" src="" alt="商品画像"
-               onerror="this.style.display='none';document.getElementById('ship-no-img').style.display='flex'">
-          <div id="ship-no-img" class="no-img" style="display:none">🖼️<span>画像なし</span></div>
-        </div>
-        <div class="product-info-col">
-          <div class="info-row"><span class="info-lbl">BC</span><span class="info-val" id="ship-barcode">-</span></div>
-          <div class="info-row"><span class="info-lbl">商品NO</span><span class="info-val" id="ship-no">-</span></div>
-          <div class="info-row"><span class="info-lbl">保管BC</span><span class="info-val" id="ship-bc-storage">-</span></div>
-          <div class="info-row"><span class="info-lbl">商品名</span><span class="info-val" id="ship-name">-</span></div>
-          <div class="info-row"><span class="info-lbl">発送手段</span><span class="info-val" id="ship-method">-</span></div>
-        </div>
-      </div>
+  <div class="g-row">
+    <div class="g-half">
+      <div class="g-lbl">🏥 病院名（必須）</div>
+      <button class="sel-tap" onclick="openListModal('hospital')">
+        <span id="sel-hosp">選択</span><span>▼</span>
+      </button>
     </div>
-
-    <!-- C: 発送処理ブロック（薄い青背景） -->
-    <div class="block-card card-blue">
-      <span class="block-title bt-blue">🚚 発送処理</span>
-      <!-- ステータス（1行） -->
-      <div class="c-row">
-        <span class="c-lbl">ステータス</span>
-        <div class="c-val">
-          <div class="cur-status-btn" id="ship-cur-status">－</div>
-        </div>
-      </div>
-      <!-- 変更チップ（販売済を除く6個） -->
-      <div class="chip-grp" id="ship-status-chips"></div>
-      <div class="divider"></div>
-      <!-- 販売済日（1行・高さ4rem） -->
-      <div class="edit-row">
-        <span class="edit-lbl">📅 販売済日</span>
-        <input type="date" class="edit-inp" id="ship-sold-date">
-      </div>
-      <!-- 販売金額（1行・¥ズレ修正・高さ4rem） -->
-      <div class="edit-row">
-        <span class="edit-lbl">💴 販売金額</span>
-        <div class="price-wrap">
-          <span class="price-prefix">¥</span>
-          <input type="text" inputmode="numeric" class="price-inp" id="ship-sell-price" placeholder="0">
-        </div>
-      </div>
-    </div>
-
-    <!-- D: 詳細情報ブロック（薄い緑背景・ヘッダー#00F562・黒文字） -->
-    <div class="block-card card-green">
-      <span class="block-title bt-green">📋 詳細情報</span>
-      <div class="detail-grid">
-        <span class="d-lbl">状態</span>    <span class="d-val" id="ship-condition">-</span>
-        <span class="d-lbl">メーカー</span><span class="d-val" id="ship-maker">-</span>
-        <span class="d-lbl">カラー</span>  <span class="d-val" id="ship-color">-</span>
-        <span class="d-lbl">サイズ</span>  <span class="d-val" id="ship-size">-</span>
-        <span class="d-lbl">備考</span>    <span class="d-val" id="ship-note">-</span>
-        <span class="d-lbl">購入金額</span><span class="d-val" id="ship-buy-price">-</span>
-        <span class="d-lbl">購入日</span>  <span class="d-val" id="ship-buy-date">-</span>
-      </div>
-    </div>
-
-    <!-- 保存・クリアボタン -->
-    <div class="btn-row" style="margin-bottom:1rem">
-      <button class="big-btn btn-save"  onclick="saveShipping()">💾 保存</button>
-      <button class="big-btn btn-clear" onclick="clearShip()">🗑 クリア</button>
+    <div class="g-half">
+      <div class="g-lbl">✏️ 科目（必須）</div>
+      <button class="sel-tap" onclick="openListModal('dept')">
+        <span id="sel-dept">選択</span><span>▼</span>
+      </button>
     </div>
   </div>
-</div>
 
-<!-- ════════════════════════════════
-     TAB2: 一括編集
-════════════════════════════════ -->
-<div class="screen" id="screen-bulk">
-  <div class="page-title">📝 一括編集</div>
-  <button class="big-btn btn-scan" style="margin-bottom:.8rem" onclick="startScan('bulk')">📷 バーコードをスキャンして追加</button>
-  <div class="bulk-count" id="bulk-count">0件 スキャン済み</div>
-  <div id="bulk-list"></div>
-  <div id="bulk-form" style="display:none">
-    <div class="bulk-form-section">
-      <div class="bulk-form-title">● 一括で変更する項目を入力</div>
-      <div style="font-size:var(--fs-xs);color:rgba(255,255,255,.6);margin-bottom:.7rem">※空欄の項目は変更されません</div>
-      <div class="form-row">
-        <div class="form-label">ステータス</div>
-        <div class="chip-grp" id="bulk-status-chips"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-label">発送手段</div>
-        <button class="sel-btn" onclick="openPopup('bulk-ship-method')"><span id="bulk-ship-method-val">選択してください</span><span>▼</span></button>
-      </div>
-      <div class="form-row">
-        <div class="form-label">📅 販売済日</div>
-        <input type="date" class="inp" id="bulk-sold-date">
-      </div>
-      <div class="form-row">
-        <div class="form-label">💴 販売金額</div>
-        <div class="price-wrap" style="height:var(--h-inp)">
-          <span class="price-prefix">¥</span>
-          <input type="text" inputmode="numeric" class="price-inp" id="bulk-sell-price" placeholder="0">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-label">📅 購入日</div>
-        <input type="date" class="inp" id="bulk-buy-date">
-      </div>
-      <div class="form-row">
-        <div class="form-label">💴 購入金額</div>
-        <div class="price-wrap" style="height:var(--h-inp)">
-          <span class="price-prefix">¥</span>
-          <input type="text" inputmode="numeric" class="price-inp" id="bulk-buy-price" placeholder="0">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-label">🏪 店名</div>
-        <button class="sel-btn" onclick="openPopup('bulk-shop')"><span id="bulk-shop-val">選択してください</span><span>▼</span></button>
-      </div>
-      <div class="form-row">
-        <div class="form-label">📦 商品名</div>
-        <button class="sel-btn" onclick="openPopup('bulk-name')"><span id="bulk-name-val">選択してください</span><span>▼</span></button>
-      </div>
-    </div>
-    <div class="btn-row" style="margin-bottom:1rem">
-      <button class="big-btn btn-save"   onclick="saveBulk()">💾 一括保存</button>
-      <button class="big-btn btn-danger" onclick="clearBulk()">🗑 全クリア</button>
+  <div class="g-card">
+    <div class="g-lbl">📞 診察</div>
+    <div class="chip-grp">
+      <button class="chip" id="c-exam-n" onclick="setChip('exam','n')">なし</button>
+      <button class="chip sel" id="c-exam-y" onclick="setChip('exam','y')">あり</button>
     </div>
   </div>
+  <div class="g-card">
+    <div class="g-lbl">🩻 画像検査</div>
+    <div class="chip-grp">
+      <button class="chip chip4 sel" id="c-img-0" onclick="setChip('img','0')">無</button>
+      <button class="chip chip4" id="c-img-xp" onclick="setChip('img','xp')">XP</button>
+      <button class="chip chip4" id="c-img-ct" onclick="setChip('img','ct')">CT</button>
+      <button class="chip chip4" id="c-img-mr" onclick="setChip('img','mr')">MR</button>
+    </div>
+  </div>
+  <div class="g-row">
+    <div class="g-half">
+      <div class="g-lbl">🩸 血液検査</div>
+      <div class="chip-grp">
+        <button class="chip sel" id="c-blood-n" onclick="setChip('blood','n')">なし</button>
+        <button class="chip" id="c-blood-y" onclick="setChip('blood','y')">あり</button>
+      </div>
+    </div>
+    <div class="g-half">
+      <div class="g-lbl">➕ 追加検査</div>
+      <div class="chip-grp">
+        <button class="chip sel" id="c-add-n" onclick="setChip('add','n')">なし</button>
+        <button class="chip" id="c-add-y" onclick="setChip('add','y')">あり</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="fee-sec">料金</div>
+  <div class="g-row">
+    <div class="g-half">
+      <div class="g-lbl">🏥 診察料金</div>
+      <div class="fee-wrap">
+        <span class="fee-yen">¥</span>
+        <input type="text" inputmode="numeric" class="fee-inp" id="f-treat"
+          placeholder="0" oninput="onFeeInput(this)" onblur="onFeeBlur(this)">
+      </div>
+    </div>
+    <div class="g-half">
+      <div class="g-lbl">💊 薬料金</div>
+      <div class="fee-wrap">
+        <span class="fee-yen">¥</span>
+        <input type="text" inputmode="numeric" class="fee-inp" id="f-med"
+          placeholder="0" oninput="onFeeInput(this)" onblur="onFeeBlur(this)">
+      </div>
+    </div>
+  </div>
+  <div class="total-box">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end">
+      <div>
+        <div class="total-top">合計金額</div>
+        <div class="total-sub" id="total-sub">（診察料金 ¥0 ・ 薬料金 ¥0）</div>
+      </div>
+      <div class="total-val" id="total-val">¥0</div>
+    </div>
+  </div>
+
+  <div class="g-card">
+    <div class="g-lbl">💊 薬の数</div>
+    <div class="drug-stepper">
+      <button class="stepper-btn" onclick="stepDrug(-1)">－</button>
+      <span class="stepper-val" id="drug-val">0</span>
+      <button class="stepper-btn" onclick="stepDrug(1)">＋</button>
+    </div>
+  </div>
+
+  <div class="g-half" style="margin-bottom:0">
+    <div class="g-lbl">📝 メモ（8文字）</div>
+    <input type="text" class="n-input" id="f-memo" placeholder="メモ" maxlength="8">
+  </div>
+
+  <!-- ⑧ 画像添付：ラベル「診察代金」「薬料金」、Canvas圧縮処理 -->
+  <div class="g-card" style="margin-top:8px">
+    <div class="g-lbl">📎 画像添付</div>
+    <div style="display:flex;gap:8px">
+      <label class="img-btn" for="img1" id="img1-lbl">
+        📷<span class="img-hint">診察代金</span>
+        <div class="img-upload-progress" id="img1-prog"><div class="img-upload-bar" id="img1-bar"></div></div>
+      </label>
+      <input type="file" id="img1" accept="image/*" style="display:none" onchange="handleImageSelect(this,1)">
+      <label class="img-btn" for="img2" id="img2-lbl">
+        📷<span class="img-hint">薬料金</span>
+        <div class="img-upload-progress" id="img2-prog"><div class="img-upload-bar" id="img2-bar"></div></div>
+      </label>
+      <input type="file" id="img2" accept="image/*" style="display:none" onchange="handleImageSelect(this,2)">
+    </div>
+  </div>
+
+  <button class="big-btn btn-rec" style="margin-top:10px" onclick="saveRecord()">💾 保存（記録）</button>
+  <button class="big-btn btn-res" onclick="openReserveModal()">🗓 予約を追加</button>
 </div>
 
-<!-- タブバー -->
+<!-- ========== HISTORY SCREEN ========== -->
+<div class="screen" id="screen-history">
+  <div class="h-tabs">
+    <button class="htab active" id="ht-yr" onclick="switchHTab('yr')">年別</button>
+    <button class="htab" id="ht-hp" onclick="switchHTab('hp')">病院別</button>
+    <button class="htab" id="ht-rv" onclick="switchHTab('rv')">予約一覧</button>
+  </div>
+  <div id="hview-yr"></div>
+  <div id="hview-hp" style="display:none"></div>
+  <div id="hview-rv" style="display:none"></div>
+</div>
+
+<!-- ========== DETAIL SCREEN ========== -->
+<div class="detail-screen" id="detail-screen">
+  <div class="detail-hdr">
+    <button class="detail-back" id="detail-back-btn">← 戻る</button>
+    <div class="detail-badge" id="detail-badge"></div>
+  </div>
+  <div id="detail-body"></div>
+</div>
+
+<!-- ========== EDIT SCREEN ========== -->
+<div class="edit-screen" id="edit-screen">
+  <div class="edit-hdr">
+    <button class="detail-back" onclick="closeEdit()">← キャンセル</button>
+    <div class="edit-hdr-title" id="edit-hdr-title">記録を編集</div>
+    <button id="edit-save-btn" onclick="commitEdit()"
+      style="background:var(--save-btn);border:none;color:#fff;border-radius:10px;padding:8px 14px;font-weight:700;cursor:pointer">保存</button>
+  </div>
+  <div class="edit-body" id="edit-body"></div>
+</div>
+
+<!-- ========== TAB BAR ========== -->
 <div class="tab-bar">
-  <button class="tab-btn active" id="tab-ship" onclick="changeTab('ship')"><span class="tab-icon">🚚</span><span class="tab-label">発送作業</span></button>
-  <button class="tab-btn"        id="tab-bulk" onclick="changeTab('bulk')"><span class="tab-icon">📝</span><span class="tab-label">一括編集</span></button>
+  <button class="tab-btn active" id="tab-record" onclick="switchTab('record')">
+    <span class="tab-icon">📝</span><span>記録</span>
+  </button>
+  <button class="tab-btn" id="tab-history" onclick="switchTab('history')">
+    <span class="tab-icon">📊</span><span>履歴</span>
+  </button>
+</div>
+
+<!-- ① リストモーダル z-index:400 -->
+<div class="modal-ov" id="modal-list" onclick="bgClose(event,'modal-list')">
+  <div class="modal-sheet">
+    <div class="modal-hdr">
+      <div class="modal-title" id="ml-title">選択</div>
+      <button class="modal-x" onclick="closeModal('modal-list')">✕</button>
+    </div>
+    <div id="ml-items"></div>
+  </div>
+</div>
+
+<!-- ① 予約モーダル z-index:300 -->
+<div class="modal-ov" id="modal-reserve" onclick="bgClose(event,'modal-reserve')">
+  <div class="modal-sheet">
+    <div class="modal-hdr">
+      <div class="modal-title">🗓 予約を追加</div>
+      <button class="modal-x" onclick="closeModal('modal-reserve')">✕</button>
+    </div>
+    <div class="f-grp">
+      <div class="f-lbl">予約日時</div>
+      <input type="datetime-local" class="f-inp" id="rv-dt">
+    </div>
+    <div class="f-grp">
+      <div class="f-lbl">病院名</div>
+      <button class="f-sel-btn" onclick="openListModal('rv-hosp')">
+        <span id="rv-hosp-txt">選択</span><span>▼</span>
+      </button>
+    </div>
+    <div class="f-grp">
+      <div class="f-lbl">科目</div>
+      <button class="f-sel-btn" onclick="openListModal('rv-dept')">
+        <span id="rv-dept-txt">選択</span><span>▼</span>
+      </button>
+    </div>
+    <button class="big-btn" style="background:var(--save-btn)" onclick="saveReserve()">💾 保存</button>
+  </div>
 </div>
 
 <script>
-// ══════════════════════════════════════════════
-//  設定
-// ══════════════════════════════════════════════
-const GAS_URL='https://script.google.com/macros/s/AKfycbzaeu3ATr2_vxLbi4IX2YP1SCSITgTxc-IOY4hdIVRLAFJNWrLaOkvT_un9kvCWiE1sbg/exec';
-const IS_GAS=(typeof google!=='undefined')&&google.script&&google.script.run;
-const SHIP_STATUSES=['在庫','検品済','保品','No有','出タイ待','出品'];
-const ALL_STATUSES =['在庫','検品済','保品','No有','出タイ待','出品','販売済'];
+// ══════════════════════════════════════════════════════
+// GAS環境判定
+// ══════════════════════════════════════════════════════
+const IS_GAS = typeof google !== 'undefined' && google.script && google.script.run;
 
-let masters={statuses:ALL_STATUSES,shippings:[],shops:[],makers:[],nameList:[]};
-let shipItem=null,shipStatus='';
-let bulkItems=[],bulkStatus='',bulkShipMethod='',bulkShop='',bulkNameId='',bulkNameLabel='';
-let scanMode='',codeReader=null,popupTarget='';
-
-// ── GAS通信（JSONP対応） ──
-function gasCall(fn,payload,ok,ng){
-  if(IS_GAS){
-    google.script.run.withSuccessHandler(r=>{if(ok)ok(r);}).withFailureHandler(e=>{if(ng)ng(e);else showToast('⚠️ 通信エラー','err');})[fn](payload);
+// GAS呼び出しラッパー
+function gasCall(fnName, payload, onSuccess, onError) {
+  if (!IS_GAS) {
+    console.warn('[gasCall] GAS環境外 - ローカル動作のみ');
+    if (onSuccess) onSuccess({ ok: true, local: true });
     return;
   }
-  // JSONP方式でCORSを回避
-  const cbName='_cb_'+Date.now();
-  window[cbName]=function(r){
-    delete window[cbName];
-    document.getElementById('jsonp-script')&&document.getElementById('jsonp-script').remove();
-    if(ok)ok(r);
+  google.script.run
+    .withSuccessHandler(res => { if (onSuccess) onSuccess(res); })
+    .withFailureHandler(err => {
+      const msg = err.message || String(err);
+      console.error('[GASエラー]', fnName, msg);
+      if (onError) onError(msg);
+      else showToast('⚠️ GASエラー: ' + msg, 'error');
+    })
+    [fnName](payload);
+}
+
+// ══════════════════════════════════════════════════════
+// ④ データ：テストデータ撤廃→GASから読み込み
+// ══════════════════════════════════════════════════════
+let hospitals = [];  // GAS getMasters() で初期化
+let depts     = [];  // GAS getMasters() で初期化
+let records   = [];  // GAS getRecords()  で初期化
+let reserves  = [];  // GAS getReserves() で初期化
+
+// UI State
+const S = { exam:'y', img:'0', blood:'n', add:'n', hosp:'', dept:'', rvHostp:'', rvDept:'' };
+let modalTarget   = '';
+let detailReturnFn = null;
+let editId        = null;
+let editMode      = 'edit';
+let showPast      = false;
+let editState     = {};
+let drugCount     = 0;
+// 画像Base64バッファ（保存時に使用）
+let imgData = { 1: null, 2: null };
+
+// ══════════════════════════════════════════════════════
+// ローディング制御
+// ══════════════════════════════════════════════════════
+function showLoading(msg = '読み込み中...') {
+  document.getElementById('loading-msg').textContent = msg;
+  document.getElementById('loading-ov').classList.add('show');
+}
+function hideLoading() {
+  document.getElementById('loading-ov').classList.remove('show');
+}
+
+// ══════════════════════════════════════════════════════
+// ④ アプリ起動時：GASから全データ読み込み
+// ══════════════════════════════════════════════════════
+function initApp() {
+  showLoading('データを読み込み中...');
+  let done = 0;
+  const total = 3; // masters / records / reserves
+  function check() {
+    done++;
+    if (done >= total) {
+      hideLoading();
+      setTodayDate();
+      updateNextAppt();
+      renderHist();
+      updateTotal();
+    }
+  }
+
+  // マスター（病院・科目リスト）
+  gasCall('getMasters', {},
+    res => {
+      if (res && res.ok) {
+        hospitals = res.hospitals || [];
+        depts     = res.depts     || [];
+      }
+      check();
+    },
+    () => check()
+  );
+
+  // 診察記録
+  gasCall('getRecords', {},
+    res => {
+      if (res && res.ok) records = res.records || [];
+      check();
+    },
+    () => check()
+  );
+
+  // 予約
+  gasCall('getReserves', {},
+    res => {
+      if (res && res.ok) reserves = res.reserves || [];
+      check();
+    },
+    () => check()
+  );
+}
+
+// ══════════════════════════════════════════════════════
+// 金額ユーティリティ
+// ══════════════════════════════════════════════════════
+function toHankaku(str) {
+  return str.replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+}
+function rawNum(str) {
+  return parseInt(toHankaku(String(str)).replace(/,/g,'').replace(/[^0-9]/g,'')) || 0;
+}
+function fmtComma(n) { return Number(n).toLocaleString('ja-JP'); }
+function onFeeInput(el) {
+  const raw = toHankaku(el.value).replace(/[^0-9]/g,'');
+  el.value = raw ? fmtComma(parseInt(raw)) : '';
+  updateTotal();
+}
+function onFeeBlur(el) {
+  const n = rawNum(el.value);
+  el.value = n > 0 ? fmtComma(n) : '';
+  updateTotal();
+}
+function updateTotal() {
+  const t = rawNum(document.getElementById('f-treat').value);
+  const m = rawNum(document.getElementById('f-med').value);
+  document.getElementById('total-val').textContent = '¥' + fmtComma(t + m);
+  document.getElementById('total-sub').textContent =
+    `（診察料金 ¥${fmtComma(t)} ・ 薬料金 ¥${fmtComma(m)}）`;
+}
+function stepDrug(d) {
+  drugCount = Math.max(0, drugCount + d);
+  document.getElementById('drug-val').textContent = drugCount;
+}
+
+// ══════════════════════════════════════════════════════
+// 汎用ユーティリティ
+// ══════════════════════════════════════════════════════
+const DOW = ['日','月','火','水','木','金','土'];
+function getDow(ds) { return DOW[new Date(ds.replace(/\//g,'-')).getDay()]; }
+function yen(n) { return '¥' + fmtComma(n); }
+function dateLabel(d) { return d + '（' + getDow(d) + '）'; }
+function dtLabel(s) {
+  const d = new Date(s);
+  const mo = String(d.getMonth()+1).padStart(2,'0');
+  const dy = String(d.getDate()).padStart(2,'0');
+  const h  = String(d.getHours()).padStart(2,'0');
+  const mi = String(d.getMinutes()).padStart(2,'0');
+  return `${d.getFullYear()}/${mo}/${dy}（${DOW[d.getDay()]}）${h}:${mi}`;
+}
+function badgeHtml(rec) {
+  let b = '';
+  if (rec.img && rec.img !== '無') b += `<span class="badge b-${rec.img.toLowerCase()}">${rec.img}</span>`;
+  if (rec.blood === 'あり')   b += '<span class="badge b-blood">血</span>';
+  if (rec.addTest === 'あり') b += '<span class="badge b-add">追</span>';
+  if (rec.drug > 0)           b += `<span class="badge b-med">薬${rec.drug}</span>`;
+  if (rec.memo)               b += `<span class="badge b-diag">${rec.memo}</span>`;
+  return b;
+}
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (type ? ' '+type : '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+function bgClose(e, id) { if (e.target === document.getElementById(id)) closeModal(id); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function mk(tag, cls='') { const e = document.createElement(tag); if(cls) e.className=cls; return e; }
+
+function setTodayDate() {
+  const n = new Date();
+  const v = `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+  document.getElementById('dp').value = v;
+}
+
+// ══════════════════════════════════════════════════════
+// CHIPS
+// ══════════════════════════════════════════════════════
+function setChip(g, v) {
+  S[g] = v;
+  if (g === 'exam') {
+    document.getElementById('c-exam-n').className = 'chip' + (v==='n'?' sel':'');
+    document.getElementById('c-exam-y').className = 'chip' + (v==='y'?' sel':'');
+  } else if (g === 'img') {
+    ['0','xp','ct','mr'].forEach(x =>
+      document.getElementById('c-img-'+x).className = 'chip chip4'+(v===x?' sel':'')
+    );
+  } else if (g === 'blood') {
+    document.getElementById('c-blood-n').className = 'chip'+(v==='n'?' sel':'');
+    document.getElementById('c-blood-y').className = 'chip'+(v==='y'?' sel':'');
+  } else if (g === 'add') {
+    document.getElementById('c-add-n').className = 'chip'+(v==='n'?' sel':'');
+    document.getElementById('c-add-y').className = 'chip'+(v==='y'?' sel':'');
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════════════════
+function switchTab(t) {
+  ['record','history'].forEach(x => {
+    document.getElementById('screen-'+x).classList.toggle('active', x===t);
+    document.getElementById('tab-'+x).classList.toggle('active', x===t);
+  });
+  if (t === 'history') renderHist();
+}
+function switchHTab(t) {
+  ['yr','hp','rv'].forEach(x => {
+    document.getElementById('ht-'+x).classList.toggle('active', x===t);
+    document.getElementById('hview-'+x).style.display = x===t ? 'block' : 'none';
+  });
+  if (t==='yr') renderYear();
+  if (t==='hp') renderHosp();
+  if (t==='rv') renderReserve();
+}
+function renderHist() { renderYear(); renderHosp(); renderReserve(); }
+
+// ══════════════════════════════════════════════════════
+// ① リストモーダル（z-index修正済み）
+// ⑤ 新規追加時にGAS addMaster を呼び出す
+// ══════════════════════════════════════════════════════
+function openListModal(target) {
+  modalTarget = target;
+  const titles = {
+    hospital:'🏥 病院名を選択', dept:'✏️ 科目を選択',
+    'rv-hosp':'🏥 病院名を選択', 'rv-dept':'✏️ 科目を選択',
+    'edit-hosp':'🏥 病院名を選択', 'edit-dept':'✏️ 科目を選択'
   };
-  const s=document.createElement('script');
-  s.id='jsonp-script';
-  s.src=GAS_URL+'?fn='+encodeURIComponent(fn)+'&payload='+encodeURIComponent(JSON.stringify(payload))+'&callback='+cbName;
-  s.onerror=()=>{delete window[cbName];s.remove();if(ng)ng(new Error('通信エラー'));else showToast('⚠️ 通信エラー','err');};
-  document.head.appendChild(s);
-}
+  document.getElementById('ml-title').textContent = titles[target] || '選択';
+  const isDept = ['dept','rv-dept','edit-dept'].includes(target);
+  const list   = isDept ? depts : hospitals;
+  const items  = document.getElementById('ml-items');
+  items.innerHTML = '';
 
-// ── UI共通 ──
-function showLoad(m){document.getElementById('loading-msg').textContent=m||'処理中...';document.getElementById('loading-ov').classList.add('show');}
-function hideLoad(){document.getElementById('loading-ov').classList.remove('show');}
-let _tt=null;
-function showToast(msg,type){const el=document.getElementById('toast');el.textContent=msg;el.className='toast'+(type==='err'?' err':'')+' show';if(_tt)clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),2600);}
-function showDialog(title,msg,okCb,cancelCb){
-  document.getElementById('dialog-title').textContent=title;
-  document.getElementById('dialog-msg').textContent=msg;
-  const cb=document.getElementById('dialog-cancel');cb.style.display=cancelCb?'':'none';
-  cb.onclick=()=>{closeDialog();if(cancelCb)cancelCb();};
-  document.getElementById('dialog-ok').onclick=()=>{closeDialog();if(okCb)okCb();};
-  document.getElementById('dialog-ov').classList.add('open');
-}
-function closeDialog(){document.getElementById('dialog-ov').classList.remove('open');}
-function setText(id,val){const el=document.getElementById(id);if(el)el.textContent=val||'-';}
-function changeTab(n){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('screen-'+n).classList.add('active');
-  document.getElementById('tab-'+n).classList.add('active');
-}
-
-// ── ポップアップ ──
-function openPopup(target){
-  popupTarget=target;const listEl=document.getElementById('popup-list');listEl.innerHTML='';
-  let items=[],title='選択',current='';
-  if(target==='bulk-ship-method'){title='発送手段';items=masters.shippings;current=bulkShipMethod;}
-  else if(target==='bulk-shop'){title='店名';items=masters.shops;current=bulkShop;}
-  else if(target==='bulk-name'){title='商品名';items=masters.nameList.map(n=>n.name);current=bulkNameLabel;}
-  document.getElementById('popup-title').textContent=title;
-  items.forEach(item=>{
-    const d=document.createElement('div');
-    d.className='popup-item'+(item===current?' selected':'');
-    d.textContent=item;d.onclick=()=>selectPopupItem(item);
-    listEl.appendChild(d);
+  list.forEach(item => {
+    const d = mk('div','modal-item'); d.textContent = item;
+    d.onclick = () => { setListVal(target, item); closeModal('modal-list'); };
+    items.appendChild(d);
   });
-  document.getElementById('popup-ov').classList.add('open');
-}
-function selectPopupItem(val){
-  if(popupTarget==='bulk-ship-method'){bulkShipMethod=val;document.getElementById('bulk-ship-method-val').textContent=val;}
-  else if(popupTarget==='bulk-shop'){bulkShop=val;document.getElementById('bulk-shop-val').textContent=val;}
-  else if(popupTarget==='bulk-name'){bulkNameLabel=val;const f=masters.nameList.find(n=>n.name===val);bulkNameId=f?f.id:'';document.getElementById('bulk-name-val').textContent=val;}
-  closePopup();
-}
-function closePopup(){document.getElementById('popup-ov').classList.remove('open');}
 
-// ── ステータスチップ ──
-function buildStatusChips(id,statusList,getV,setV){
-  const grp=document.getElementById(id);grp.innerHTML='';
-  statusList.forEach(s=>{
-    const b=document.createElement('button');
-    b.className='chip'+(getV()===s?' sel':'');b.textContent=s;
-    b.onclick=()=>{setV(s);grp.querySelectorAll('.chip').forEach(c=>c.classList.remove('sel'));b.classList.add('sel');};
-    grp.appendChild(b);
+  // ⑤ 新規追加→GAS masterシートに同期
+  const add = mk('div','modal-add'); add.textContent = '＋ 新規追加';
+  add.onclick = () => {
+    const v = prompt(isDept ? '新しい科目を入力：' : '新しい病院名を入力：');
+    if (!v || !v.trim()) return;
+    const val = v.trim();
+    if (isDept) { if (!depts.includes(val)) depts.push(val); }
+    else        { if (!hospitals.includes(val)) hospitals.push(val); }
+    // ⑤ GAS masterシートへ保存
+    gasCall('addMaster', { type: isDept ? 'dept' : 'hospital', value: val },
+      res => {
+        if (res && res.ok) showToast('✅ マスターに追加しました');
+        else showToast('⚠️ マスター保存エラー', 'error');
+      }
+    );
+    setListVal(target, val);
+    closeModal('modal-list');
+  };
+  items.appendChild(add);
+  openModal('modal-list');
+}
+
+function setListVal(target, val) {
+  if      (target==='hospital')  { S.hosp=val;    document.getElementById('sel-hosp').textContent=val; }
+  else if (target==='dept')      { S.dept=val;    document.getElementById('sel-dept').textContent=val; }
+  else if (target==='rv-hosp')   { S.rvHostp=val; document.getElementById('rv-hosp-txt').textContent=val; }
+  else if (target==='rv-dept')   { S.rvDept=val;  document.getElementById('rv-dept-txt').textContent=val; }
+  else if (target==='edit-hosp') {
+    editState.hosp = val;
+    const b = document.getElementById('edit-hosp-btn');
+    if (b) b.querySelector('span').textContent = val;
+  }
+  else if (target==='edit-dept') {
+    editState.dept = val;
+    const b = document.getElementById('edit-dept-btn');
+    if (b) b.querySelector('span').textContent = val;
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// ⑧ 画像処理：Canvas圧縮 → Base64
+// ══════════════════════════════════════════════════════
+function handleImageSelect(input, num) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const lbl  = document.getElementById('img' + num + '-lbl');
+  const prog = document.getElementById('img' + num + '-prog');
+  const bar  = document.getElementById('img' + num + '-bar');
+
+  lbl.innerHTML = `⏳<span class="img-hint">処理中...</span>
+    <div class="img-upload-progress show" id="img${num}-prog">
+      <div class="img-upload-bar" id="img${num}-bar" style="width:30%"></div>
+    </div>`;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const origData = e.target.result;
+    const prog2 = document.getElementById('img' + num + '-prog');
+    const bar2  = document.getElementById('img' + num + '-bar');
+    if (bar2) bar2.style.width = '60%';
+
+    // Canvas APIでリサイズ + JPEG変換
+    const img = new Image();
+    img.onload = function() {
+      const MAX = 1024;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w >= h) { h = Math.round(h * MAX / w); w = MAX; }
+        else        { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      // JPEG 70% 圧縮
+      const compressed = canvas.toDataURL('image/jpeg', 0.7);
+      // Base64部分のみ抽出（先頭のdata:image/jpeg;base64,を除去）
+      imgData[num] = {
+        base64:    compressed.split(',')[1],
+        mimeType:  'image/jpeg',
+        origName:  file.name,
+      };
+      if (bar2) bar2.style.width = '100%';
+      setTimeout(() => {
+        lbl.innerHTML = `✅<span class="img-hint">${num===1?'診察代金':'薬料金'}</span>`;
+        lbl.style.background = 'rgba(109,191,114,.4)';
+      }, 300);
+    };
+    img.onerror = function() {
+      showToast('⚠️ 画像の読み込みに失敗しました', 'error');
+      lbl.innerHTML = `📷<span class="img-hint">${num===1?'診察代金':'薬料金'}</span>`;
+      lbl.style.background = '';
+    };
+    img.src = origData;
+  };
+  reader.onerror = function() {
+    showToast('⚠️ ファイル読み込みエラー', 'error');
+  };
+  reader.readAsDataURL(file);
+}
+
+// GASへ画像をアップロード
+function uploadImage(num, recordId, dateStr, hospName) {
+  if (!imgData[num]) return;
+  const typeLabel = num === 1 ? '診察代金' : '薬料金';
+  // ⑧ ファイル名規則: 2026/03/05-○○病院-診察代金
+  const fname = `${dateStr}-${hospName}-${typeLabel}`;
+  showLoading(`画像${num}をアップロード中...`);
+  gasCall('saveImageToDrive',
+    {
+      base64:    imgData[num].base64,
+      mimeType:  imgData[num].mimeType,
+      name:      fname + '.jpg',
+      recordId:  String(recordId),
+      imgNum:    num,
+    },
+    res => {
+      hideLoading();
+      if (res && res.ok) {
+        showToast(`✅ 画像${num}（${typeLabel}）を保存しました`, 'info');
+        // 残りの画像をアップロード
+        if (num === 1 && imgData[2]) uploadImage(2, recordId, dateStr, hospName);
+      } else {
+        showToast(`⚠️ 画像${num}の保存失敗: ${res ? res.error : '不明'}`, 'error');
+        console.error('[画像アップロードエラー]', res);
+      }
+    },
+    errMsg => {
+      hideLoading();
+      if (errMsg && errMsg.includes('timeout')) {
+        showToast('⚠️ 通信タイムアウト - 再試行してください', 'error');
+        console.error('[タイムアウトエラー]', errMsg);
+      } else {
+        showToast('⚠️ GASエラー: ' + errMsg, 'error');
+        console.error('[GASエラー]', errMsg);
+      }
+    }
+  );
+}
+
+// ══════════════════════════════════════════════════════
+// 記録保存
+// ══════════════════════════════════════════════════════
+function saveRecord() {
+  const dv = document.getElementById('dp').value;
+  if (!dv)     { alert('診察日を入力してください'); return; }
+  if (!S.hosp) { alert('病院名を選択してください'); return; }
+  if (!S.dept) { alert('科目を選択してください'); return; }
+
+  const d  = new Date(dv);
+  const ds = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+  const imgMap = {0:'無', xp:'XP', ct:'CT', mr:'MR'};
+
+  const treatNum = rawNum(document.getElementById('f-treat').value);
+  const medNum   = rawNum(document.getElementById('f-med').value);
+  const memo     = document.getElementById('f-memo').value.slice(0, 8);
+
+  const rec = {
+    id: Date.now(),
+    date: ds, dow: getDow(ds),
+    hosp: S.hosp, dept: S.dept,
+    exam:    S.exam  === 'y' ? 'あり' : 'なし',
+    img:     imgMap[S.img] || '無',
+    blood:   S.blood === 'y' ? 'あり' : 'なし',
+    addTest: S.add   === 'y' ? 'あり' : 'なし',
+    drug:  drugCount,
+    treat: treatNum,
+    med:   medNum,
+    memo:  memo,
+  };
+
+  showLoading('保存中...');
+  gasCall('saveRecord', rec,
+    res => {
+      hideLoading();
+      if (res && res.ok === false) {
+        showToast('⚠️ 保存エラー: ' + res.error, 'error');
+        return;
+      }
+      // ④ ローカルにも追加（再起動まで画面に反映）
+      records.unshift(rec);
+      showToast('✅ 保存しました');
+      // ⑧ 画像があればアップロード
+      if (imgData[1] || imgData[2]) {
+        if (imgData[1]) uploadImage(1, rec.id, ds, S.hosp);
+        else if (imgData[2]) uploadImage(2, rec.id, ds, S.hosp);
+      }
+      resetForm();
+      setTimeout(() => switchTab('history'), 500);
+    },
+    errMsg => {
+      hideLoading();
+      showToast('⚠️ 保存エラー: ' + errMsg, 'error');
+    }
+  );
+}
+
+function resetForm() {
+  document.getElementById('f-treat').value = '';
+  document.getElementById('f-med').value   = '';
+  document.getElementById('f-memo').value  = '';
+  drugCount = 0;
+  document.getElementById('drug-val').textContent = '0';
+  updateTotal();
+  S.hosp = ''; S.dept = '';
+  document.getElementById('sel-hosp').textContent = '選択';
+  document.getElementById('sel-dept').textContent = '選択';
+  setChip('exam','y'); setChip('img','0'); setChip('blood','n'); setChip('add','n');
+  imgData = {1:null, 2:null};
+  // 画像ボタンリセット
+  [1,2].forEach(n => {
+    const lbl = document.getElementById('img'+n+'-lbl');
+    lbl.style.background = '';
+    lbl.innerHTML = `📷<span class="img-hint">${n===1?'診察代金':'薬料金'}</span>
+      <div class="img-upload-progress" id="img${n}-prog"><div class="img-upload-bar" id="img${n}-bar"></div></div>`;
   });
+  setTodayDate();
 }
 
-// ── ZXing スキャン ──
-function startScan(mode){
-  scanMode=mode;document.getElementById('scan-ov').classList.add('open');
-  try{
-    const hints=new Map();
-    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[
-      ZXing.BarcodeFormat.CODE_39,ZXing.BarcodeFormat.CODE_128,
-      ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8
-    ]);
-    hints.set(ZXing.DecodeHintType.TRY_HARDER,true);
-    codeReader=new ZXing.BrowserMultiFormatReader(hints);
-    codeReader.decodeFromVideoDevice(null,'scan-video',(result,err)=>{
-      if(result){stopScan();fetchProduct(result.getText(),scanMode);}
+// ══════════════════════════════════════════════════════
+// 予約
+// ══════════════════════════════════════════════════════
+function openReserveModal() { openModal('modal-reserve'); }
+function saveReserve() {
+  const dt = document.getElementById('rv-dt').value;
+  if (!dt)        { alert('予約日時を入力してください'); return; }
+  if (!S.rvHostp) { alert('病院名を選択してください'); return; }
+  const r = { id: Date.now(), dt, hosp: S.rvHostp, dept: S.rvDept || '' };
+  showLoading('予約を保存中...');
+  gasCall('saveReserve', r,
+    res => {
+      hideLoading();
+      if (res && res.ok === false) { showToast('⚠️ 予約保存エラー', 'error'); return; }
+      reserves.push(r);
+      closeModal('modal-reserve');
+      showToast('✅ 予約を保存しました');
+      updateNextAppt(); renderReserve();
+    },
+    () => hideLoading()
+  );
+}
+
+function updateNextAppt() {
+  const now = new Date();
+  const fut = reserves.filter(r => new Date(r.dt) > now).sort((a,b) => new Date(a.dt)-new Date(b.dt));
+  const el = document.getElementById('next-appt');
+  if (!fut.length) { el.textContent='予約なし'; el.style.fontSize='20px'; }
+  else {
+    const r = fut[0];
+    el.innerHTML = `${dtLabel(r.dt)}<br>${r.hosp} / ${r.dept}`;
+    el.style.fontSize = '14px';
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// ② 年別ビュー
+// ⑦ PDF月フィルタ：ゼロ埋め統一
+// ══════════════════════════════════════════════════════
+// ⑦ month を必ず2桁ゼロ埋めに統一する関数
+function padMonth(m) { return m ? String(m).padStart(2,'0') : null; }
+
+function renderYear(year=null, month=null) {
+  const c = document.getElementById('hview-yr'); c.innerHTML = '';
+  const mo = padMonth(month); // ⑦ ゼロ埋め統一
+
+  if (!year) {
+    appendBreadcrumb(c, [{label:'📊 年別'}]);
+    const yrs = [...new Set(records.map(r=>r.date.split('/')[0]))].sort().reverse();
+    if (!yrs.length) { const e=mk('div'); e.style.cssText='color:rgba(255,255,255,.5);padding:20px;text-align:center'; e.textContent='記録がありません'; c.appendChild(e); return; }
+    yrs.forEach(y => {
+      const recs = records.filter(r=>r.date.startsWith(y));
+      const tot  = recs.reduce((s,r)=>s+r.treat+r.med,0);
+      // ② コンパクトカード
+      const d = mk('div','yr-card');
+      d.innerHTML = `<span class="yr-title">${y}年</span><span class="yr-sub">${yen(tot)} / ${recs.length}回</span>`;
+      d.onclick = () => renderYear(y);
+      c.appendChild(d);
     });
-  }catch(e){stopScan();showToast('⚠️ カメラの起動に失敗しました','err');}
-}
-function stopScan(){if(codeReader){try{codeReader.reset();}catch(e){}codeReader=null;}document.getElementById('scan-ov').classList.remove('open');}
-
-// ── 手動検索 ──
-function searchManual(){
-  const val=document.getElementById('search-input').value.trim();
-  if(!val){showToast('⚠️ バーコードまたは商品NOを入力してください','err');return;}
-  fetchProduct(val,'ship');
-}
-
-// ── 商品検索 ──
-function fetchProduct(barcode,mode){
-  showLoad('商品照合中...');
-  gasCall('getProductByBarcode',{barcode:barcode},res=>{
-    hideLoad();
-    if(res&&res.found){if(mode==='ship')showShipDetail(res.item);else addBulkItem(res.item);}
-    else showToast('⚠️ 未登録のバーコードです','err');
-  },()=>{hideLoad();showToast('⚠️ 通信エラー','err');});
-}
-
-// ── TAB1 発送作業 ──
-function showShipDetail(item){
-  shipItem=item;shipStatus=item.ステータス||'';
-  document.getElementById('ship-empty').style.display='none';
-  document.getElementById('ship-detail').style.display='block';
-  const img=document.getElementById('ship-img'),noImg=document.getElementById('ship-no-img');
-  if(item.imgUrl){img.src=item.imgUrl;img.style.display='block';noImg.style.display='none';}
-  else{img.style.display='none';noImg.style.display='flex';}
-  setText('ship-barcode',item.バーコード);
-  setText('ship-no',item.商品NO);
-  setText('ship-bc-storage',item.保管バーコード);
-  setText('ship-name',item.商品名);
-  setText('ship-method',item.発送手段);
-  document.getElementById('ship-cur-status').textContent=item.ステータス||'－';
-  setText('ship-condition',item.状態);
-  setText('ship-maker',item.メーカー);
-  setText('ship-color',item.カラー);
-  setText('ship-size',item.サイズ数量);
-  setText('ship-note',item.備考);
-  setText('ship-buy-price',item.購入金額?'¥'+Number(item.購入金額).toLocaleString():'-');
-  setText('ship-buy-date',item.購入日);
-  const t=new Date();
-  document.getElementById('ship-sold-date').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
-  document.getElementById('ship-sell-price').value=item.販売金額?String(item.販売金額):'';
-  buildStatusChips('ship-status-chips',SHIP_STATUSES,()=>shipStatus,s=>{shipStatus=s;});
-}
-function saveShipping(){
-  if(!shipItem){showToast('⚠️ 商品をスキャンしてください','err');return;}
-  if(!shipStatus){showToast('⚠️ ステータスを選択してください','err');return;}
-  const soldDate=document.getElementById('ship-sold-date').value;
-  if(!soldDate){showToast('⚠️ 販売済日を入力してください','err');return;}
-  const sellPrice=document.getElementById('ship-sell-price').value.replace(/[^0-9]/g,'');
-  showDialog('発送処理を保存',
-    '商品NO: '+shipItem.商品NO+'\nステータス: '+shipStatus+'\n発送日: '+soldDate.replace(/-/g,'/')+'\n\n保存しますか？',
-    ()=>{
-      showLoad('保存中...');
-      gasCall('updateShipping',{rowIndex:shipItem.rowIndex,ステータス:shipStatus,販売済日:soldDate.replace(/-/g,'/'),販売金額:sellPrice?Number(sellPrice):undefined},
-        res=>{hideLoad();if(res&&res.ok){showToast('✅ 保存しました');clearShip();}else showToast('⚠️ 保存に失敗しました','err');},
-        ()=>{hideLoad();showToast('⚠️ 通信エラー','err');});
-    },null);
-}
-function clearShip(){
-  shipItem=null;shipStatus='';
-  document.getElementById('ship-empty').style.display='block';
-  document.getElementById('ship-detail').style.display='none';
-  document.getElementById('search-input').value='';
+  } else if (!mo) {
+    appendBreadcrumb(c, [{label:'📊 年別',fn:()=>renderYear()},{label:year+'年'}]);
+    const allRecs = records.filter(r=>r.date.startsWith(year));
+    const totT = allRecs.reduce((s,r)=>s+r.treat,0), totM = allRecs.reduce((s,r)=>s+r.med,0);
+    const grid = mk('div','mo-grid');
+    ['01','02','03','04','05','06','07','08','09','10','11','12'].forEach(m => {
+      const recs = records.filter(r=>r.date.startsWith(year+'/'+m));
+      const tot  = recs.reduce((s,r)=>s+r.treat+r.med,0);
+      const cell = mk('div','mo-cell'+(recs.length?' has-data':''));
+      cell.innerHTML = `<div class="mo-name">${m}月</div>${recs.length?`<div class="mo-info">${yen(tot)}<br>${recs.length}回</div>`:''}`;
+      if (recs.length) cell.onclick = () => renderYear(year, m); // mは既に2桁
+      grid.appendChild(cell);
+    });
+    c.appendChild(grid);
+    const pb = mk('button','pdf-btn'); pb.textContent = '🖨 PDF生成（印刷）';
+    pb.onclick = () => doPdf(null, year, null); c.appendChild(pb);
+    appendSummaryBar(c, totT, totM, allRecs.length);
+  } else {
+    appendBreadcrumb(c, [
+      {label:'📊 年別',fn:()=>renderYear()},
+      {label:year+'年',fn:()=>renderYear(year)},
+      {label:mo+'月'}
+    ]);
+    // ⑦ ゼロ埋めしたmoで正しくフィルタ
+    const monthRecs = records.filter(r=>r.date.startsWith(year+'/'+mo));
+    const totT = monthRecs.reduce((s,r)=>s+r.treat,0), totM = monthRecs.reduce((s,r)=>s+r.med,0);
+    const pb = mk('button','pdf-btn'); pb.textContent = '🖨 PDF生成（印刷）';
+    pb.onclick = () => doPdf(null, year, mo); c.appendChild(pb);
+    const dayMap = {};
+    monthRecs.forEach(r => { if(!dayMap[r.date]) dayMap[r.date]=[]; dayMap[r.date].push(r); });
+    Object.keys(dayMap).sort().reverse().forEach(day => {
+      const dg = mk('div','day-group');
+      const dh = mk('div','day-header'); dh.textContent = dateLabel(day); dg.appendChild(dh);
+      dayMap[day].forEach(rec => dg.appendChild(buildRecItem(rec, ()=>renderYear(year,mo))));
+      c.appendChild(dg);
+    });
+    appendSummaryBar(c, totT, totM, monthRecs.length);
+  }
 }
 
-// ── TAB2 一括編集 ──
-function addBulkItem(item){
-  if(bulkItems.find(b=>b.識別ID===item.識別ID)){showToast('⚠️ すでに追加済みです','err');return;}
-  bulkItems.push(item);renderBulkList();showToast('✅ '+(item.商品名||item.バーコード)+' を追加');
+// ══════════════════════════════════════════════════════
+// 病院別ビュー（ゼロ埋め統一）
+// ══════════════════════════════════════════════════════
+function renderHosp(dept=null, hosp=null, year=null, month=null) {
+  const c = document.getElementById('hview-hp'); c.innerHTML = '';
+  const mo = padMonth(month);
+
+  if (!dept) {
+    appendBreadcrumb(c, [{label:'🏥 病院別'}]);
+    const dm = {};
+    records.forEach(r => { dm[r.dept]=(dm[r.dept]||0)+1; });
+    if (!Object.keys(dm).length) { const e=mk('div'); e.style.cssText='color:rgba(255,255,255,.5);padding:20px;text-align:center'; e.textContent='記録がありません'; c.appendChild(e); return; }
+    const grid = mk('div','dept-grid');
+    Object.keys(dm).forEach(d => {
+      const card = mk('div','dept-card');
+      card.innerHTML = `<div class="dept-nm">${d}</div><div class="dept-cnt">${dm[d]}</div>`;
+      card.onclick = () => renderHosp(d); grid.appendChild(card);
+    });
+    c.appendChild(grid);
+  } else if (!hosp) {
+    appendBreadcrumb(c, [{label:'🏥 病院別',fn:()=>renderHosp()},{label:dept}]);
+    const hm = {};
+    records.filter(r=>r.dept===dept).forEach(r => hm[r.hosp]=true);
+    const wrap = mk('div'); wrap.style.cssText='display:flex;flex-wrap:wrap;margin-bottom:8px';
+    Object.keys(hm).forEach(h => {
+      const pill = mk('div','hosp-pill'); pill.textContent=h;
+      pill.onclick = () => renderHosp(dept,h); wrap.appendChild(pill);
+    });
+    c.appendChild(wrap);
+  } else if (!year) {
+    appendBreadcrumb(c, [{label:'🏥 病院別',fn:()=>renderHosp()},{label:dept,fn:()=>renderHosp(dept)},{label:hosp}]);
+    const yrs = [...new Set(records.filter(r=>r.dept===dept&&r.hosp===hosp).map(r=>r.date.split('/')[0]))].sort().reverse();
+    yrs.forEach(y => {
+      const recs = records.filter(r=>r.dept===dept&&r.hosp===hosp&&r.date.startsWith(y));
+      const tot  = recs.reduce((s,r)=>s+r.treat+r.med,0);
+      const d    = mk('div','yr-card');
+      d.innerHTML=`<span class="yr-title">${y}年</span><span class="yr-sub">${yen(tot)} / ${recs.length}回</span>`;
+      d.onclick = () => renderHosp(dept,hosp,y); c.appendChild(d);
+    });
+  } else if (!mo) {
+    appendBreadcrumb(c, [
+      {label:'🏥 病院別',fn:()=>renderHosp()},{label:dept,fn:()=>renderHosp(dept)},
+      {label:hosp,fn:()=>renderHosp(dept,hosp)},{label:year+'年'}
+    ]);
+    const allRecs = records.filter(r=>r.dept===dept&&r.hosp===hosp&&r.date.startsWith(year));
+    const totT = allRecs.reduce((s,r)=>s+r.treat,0), totM = allRecs.reduce((s,r)=>s+r.med,0);
+    const grid = mk('div','mo-grid');
+    ['01','02','03','04','05','06','07','08','09','10','11','12'].forEach(m => {
+      const recs = allRecs.filter(r=>r.date.startsWith(year+'/'+m));
+      const tot  = recs.reduce((s,r)=>s+r.treat+r.med,0);
+      const cell = mk('div','mo-cell'+(recs.length?' has-data':''));
+      cell.innerHTML=`<div class="mo-name">${m}月</div>${recs.length?`<div class="mo-info">${yen(tot)}<br>${recs.length}回</div>`:''}`;
+      if (recs.length) cell.onclick = () => renderHosp(dept,hosp,year,m);
+      grid.appendChild(cell);
+    });
+    c.appendChild(grid);
+    const pb = mk('button','pdf-btn'); pb.textContent='🖨 PDF生成（印刷）';
+    pb.onclick = () => doPdf(hosp,year,null); c.appendChild(pb);
+    appendSummaryBar(c,totT,totM,allRecs.length);
+  } else {
+    appendBreadcrumb(c, [
+      {label:'🏥 病院別',fn:()=>renderHosp()},{label:dept,fn:()=>renderHosp(dept)},
+      {label:hosp,fn:()=>renderHosp(dept,hosp)},{label:year+'年',fn:()=>renderHosp(dept,hosp,year)},
+      {label:mo+'月'}
+    ]);
+    // ⑦ ゼロ埋めmoで正しくフィルタ
+    const monthRecs = records.filter(r=>r.dept===dept&&r.hosp===hosp&&r.date.startsWith(year+'/'+mo));
+    const totT = monthRecs.reduce((s,r)=>s+r.treat,0), totM = monthRecs.reduce((s,r)=>s+r.med,0);
+    const pb = mk('button','pdf-btn'); pb.textContent='🖨 PDF生成（印刷）';
+    pb.onclick = () => doPdf(hosp,year,mo); c.appendChild(pb);
+    const dayMap = {};
+    monthRecs.forEach(r => { if(!dayMap[r.date]) dayMap[r.date]=[]; dayMap[r.date].push(r); });
+    Object.keys(dayMap).sort().reverse().forEach(day => {
+      const dg = mk('div','day-group');
+      const dh = mk('div','day-header'); dh.textContent=dateLabel(day); dg.appendChild(dh);
+      dayMap[day].forEach(rec => dg.appendChild(buildRecItem(rec, ()=>renderHosp(dept,hosp,year,mo))));
+      c.appendChild(dg);
+    });
+    appendSummaryBar(c,totT,totM,monthRecs.length);
+  }
 }
-function renderBulkList(){
-  const listEl=document.getElementById('bulk-list');
-  document.getElementById('bulk-count').textContent=bulkItems.length+'件 スキャン済み';
-  document.getElementById('bulk-form').style.display=bulkItems.length>0?'block':'none';
-  listEl.innerHTML='';
-  bulkItems.forEach((item,idx)=>{
-    const d=document.createElement('div');d.className='bulk-item';
-    d.innerHTML=`<div class="bulk-item-no">${idx+1}</div><div class="bulk-item-info"><div class="bulk-item-name">${item.商品名||'（商品名不明）'}</div><div class="bulk-item-sub">BC: ${item.バーコード} ／ ${item.ステータス||'-'}</div></div><button class="bulk-item-del" onclick="removeBulkItem(${idx})">✕</button>`;
-    listEl.appendChild(d);
+
+// ══════════════════════════════════════════════════════
+// 予約一覧
+// ══════════════════════════════════════════════════════
+function getLinkedRecord(r) {
+  const rdt = new Date(r.dt);
+  const rDate = `${rdt.getFullYear()}/${String(rdt.getMonth()+1).padStart(2,'0')}/${String(rdt.getDate()).padStart(2,'0')}`;
+  return records.find(rec => rec.date===rDate && rec.hosp===r.hosp && rec.dept===r.dept) || null;
+}
+
+function renderReserve() {
+  const c = document.getElementById('hview-rv'); c.innerHTML = '';
+  const now = new Date();
+  const tl = mk('div','today-lbl');
+  tl.textContent = `TODAY ${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}（${DOW[now.getDay()]}）`;
+  c.appendChild(tl);
+
+  const fut = reserves.filter(r=>new Date(r.dt)>now).sort((a,b)=>new Date(a.dt)-new Date(b.dt));
+  fut.forEach(r => c.appendChild(buildResItem(r)));
+
+  const ab = mk('button','add-res-btn'); ab.textContent='＋ 予約を追加';
+  ab.onclick = openReserveModal; c.appendChild(ab);
+
+  const pb = mk('button','show-past-btn');
+  pb.textContent = showPast ? '📋 過去の予約を隠す' : '📋 過去の予約を表示';
+  pb.onclick = () => { showPast=!showPast; renderReserve(); }; c.appendChild(pb);
+
+  if (showPast) {
+    const past = reserves.filter(r=>new Date(r.dt)<=now).sort((a,b)=>new Date(b.dt)-new Date(a.dt));
+    const pw = mk('div'); pw.style.marginTop='8px';
+    past.forEach(r => pw.appendChild(buildResItem(r, true)));
+    c.appendChild(pw);
+  }
+}
+
+function buildResItem(r, isPast=false) {
+  const linked = getLinkedRecord(r);
+  const d = mk('div','res-item '+(linked?'has-detail':'no-detail'));
+  const icon = mk('span','res-icon'); icon.textContent = linked ? '📋' : '⚠️';
+  const body = mk('div','res-body');
+  body.innerHTML = `<div class="res-dt">${dtLabel(r.dt)}</div><div class="res-hp">${r.hosp} / ${r.dept}</div>`;
+  d.appendChild(icon); d.appendChild(body);
+  if (linked) d.onclick = () => openDetail(linked.id, ()=>{ switchHTab('rv'); });
+  return d;
+}
+
+// ══════════════════════════════════════════════════════
+// ヘルパー
+// ══════════════════════════════════════════════════════
+function appendBreadcrumb(c, items) {
+  const bc = mk('div','breadcrumb');
+  items.forEach((item,i) => {
+    if (i>0) { const sep=mk('span','bc-sep'); sep.textContent='›'; bc.appendChild(sep); }
+    if (item.fn) { const s=mk('span','bc-link'); s.textContent=item.label; s.onclick=item.fn; bc.appendChild(s); }
+    else { const s=mk('span'); s.textContent=item.label; s.style.color='#fff'; bc.appendChild(s); }
   });
-  buildStatusChips('bulk-status-chips',ALL_STATUSES,()=>bulkStatus,s=>{bulkStatus=s;});
-}
-function removeBulkItem(idx){bulkItems.splice(idx,1);renderBulkList();}
-function saveBulk(){
-  if(bulkItems.length===0){showToast('⚠️ 商品をスキャンしてください','err');return;}
-  const soldDate=document.getElementById('bulk-sold-date').value,buyDate=document.getElementById('bulk-buy-date').value;
-  const sellPrice=document.getElementById('bulk-sell-price').value.replace(/[^0-9]/g,''),buyPrice=document.getElementById('bulk-buy-price').value.replace(/[^0-9]/g,'');
-  showDialog('一括保存の確認',bulkItems.length+'件をまとめて保存します\nよろしいですか？',
-    ()=>{
-      showLoad('一括保存中...');
-      const items=bulkItems.map(item=>{
-        const p={rowIndex:item.rowIndex};
-        if(bulkStatus)p.ステータス=bulkStatus;if(bulkShipMethod)p.発送手段=bulkShipMethod;
-        if(soldDate)p.販売済日=soldDate.replace(/-/g,'/');if(buyDate)p.購入日=buyDate.replace(/-/g,'/');
-        if(sellPrice)p.販売金額=Number(sellPrice);if(buyPrice)p.購入金額=Number(buyPrice);
-        if(bulkShop)p.店名=bulkShop;if(bulkNameId)p.商品名ID=bulkNameId;
-        return p;
-      });
-      gasCall('bulkUpdate',{items:items},
-        res=>{hideLoad();if(res&&res.ok){showToast('✅ '+res.updated+'件 保存しました');clearBulk();}else showToast('⚠️ 保存に失敗しました','err');},
-        ()=>{hideLoad();showToast('⚠️ 通信エラー','err');});
-    },null);
-}
-function clearBulk(){
-  bulkItems=[];bulkStatus='';bulkShipMethod='';bulkShop='';bulkNameId='';bulkNameLabel='';
-  ['bulk-sold-date','bulk-buy-date','bulk-sell-price','bulk-buy-price'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('bulk-ship-method-val').textContent='選択してください';
-  document.getElementById('bulk-shop-val').textContent='選択してください';
-  document.getElementById('bulk-name-val').textContent='選択してください';
-  renderBulkList();
+  c.appendChild(bc);
 }
 
-// ── 初期化 ──
-function loadMasters(){
-  showLoad('データ読み込み中...');
-  gasCall('getMasters',{},res=>{
-    hideLoad();if(res&&res.ok)masters=res;
-    buildStatusChips('ship-status-chips',SHIP_STATUSES,()=>shipStatus,s=>{shipStatus=s;});
-    buildStatusChips('bulk-status-chips',ALL_STATUSES,()=>bulkStatus,s=>{bulkStatus=s;});
-  },()=>{hideLoad();showToast('⚠️ マスタ読み込みエラー','err');});
+function appendSummaryBar(c, totT, totM, cnt) {
+  const bar = mk('div','sum-bar');
+  bar.innerHTML = `
+    <div class="sum-cell"><div class="sum-lbl">合計金額</div><div class="sum-val">${yen(totT+totM)}</div></div>
+    <div class="sum-cell"><div class="sum-lbl">治療費</div><div class="sum-val">${yen(totT)}</div></div>
+    <div class="sum-cell"><div class="sum-lbl">薬料金</div><div class="sum-val">${yen(totM)}</div></div>
+    <div class="sum-cell"><div class="sum-lbl">通院回数</div><div class="sum-val">${cnt}回</div></div>
+  `;
+  c.appendChild(bar);
 }
-loadMasters();
+
+function buildRecItem(rec, returnFn) {
+  const d = mk('div','rec-item');
+  d.innerHTML = `
+    <div class="rec-head"><span class="rec-date">${dateLabel(rec.date)}</span><span class="rec-amt">${yen(rec.treat+rec.med)}</span></div>
+    <div class="rec-hosp">${rec.hosp}　${rec.dept}</div>
+    <div class="badge-row">${badgeHtml(rec)}</div>
+  `;
+  d.onclick = () => openDetail(rec.id, returnFn);
+  return d;
+}
+
+// ══════════════════════════════════════════════════════
+// 詳細画面
+// ══════════════════════════════════════════════════════
+function openDetail(id, returnFn) {
+  const rec = records.find(r=>r.id===id); if(!rec) return;
+  detailReturnFn = returnFn;
+  document.getElementById('detail-badge').textContent = dateLabel(rec.date);
+  document.getElementById('detail-back-btn').onclick = closeDetail;
+  const body = document.getElementById('detail-body');
+  body.innerHTML = `
+    <div class="d-card"><div class="d-lbl">🏥 病院名</div><div class="d-val">${rec.hosp}</div></div>
+    <div class="d-card"><div class="d-lbl">✏️ 科目</div><div class="d-val">${rec.dept}</div></div>
+    <div class="d-card"><div class="d-lbl">🩻 画像検査</div><div class="d-val">${rec.img}</div></div>
+    <div class="d-card"><div class="d-lbl">🩸 血液検査</div><div class="d-val">${rec.blood}</div></div>
+    <div class="d-card"><div class="d-lbl">➕ 追加検査</div><div class="d-val">${rec.addTest}</div></div>
+    <div class="d-card"><div class="d-lbl">💊 薬の数</div><div class="d-val">${rec.drug}個</div></div>
+    <div class="fee-card">
+      <div class="fee-row"><span>🏥 治療費</span><span>${yen(rec.treat)}</span></div>
+      <div class="fee-row"><span>💊 薬料金</span><span>${yen(rec.med)}</span></div>
+      <div class="fee-total"><span>合計金額</span><span class="fee-total-v">${yen(rec.treat+rec.med)}</span></div>
+    </div>
+    <div class="d-actions">
+      <button class="act-btn btn-edit" onclick="openEdit(${id},'edit')">📝 編集</button>
+      <button class="act-btn btn-del"  onclick="deleteRec(${id})">🗑 削除</button>
+      <button class="act-btn btn-copy" onclick="openEdit(${id},'copy')">📋 複製</button>
+    </div>
+  `;
+  document.getElementById('detail-screen').classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detail-screen').classList.remove('open');
+  if (detailReturnFn) detailReturnFn();
+}
+
+function deleteRec(id) {
+  if (!confirm('この記録を削除しますか？')) return;
+  showLoading('削除中...');
+  gasCall('deleteRecord', {id},
+    res => {
+      hideLoading();
+      records = records.filter(r=>r.id!==id);
+      closeDetail(); showToast('🗑 削除しました'); renderHist();
+    },
+    () => hideLoading()
+  );
+}
+
+// ══════════════════════════════════════════════════════
+// 編集・複製
+// ══════════════════════════════════════════════════════
+function openEdit(id, mode='edit') {
+  const rec = records.find(r=>r.id===id); if(!rec) return;
+  editId = id; editMode = mode; editState = {...rec};
+  const imgValMap = {'無':'0','XP':'xp','CT':'ct','MR':'mr'};
+  document.getElementById('edit-hdr-title').textContent = mode==='copy' ? '複製して新規作成' : '記録を編集';
+  document.getElementById('edit-save-btn').textContent  = mode==='copy' ? '別名で保存' : '保存';
+  const defDate = mode==='copy'
+    ? (()=>{ const n=new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; })()
+    : rec.date.replace(/\//g,'-');
+  const body = document.getElementById('edit-body');
+  body.innerHTML = `
+    <div class="edit-sec">
+      <div class="edit-sec-lbl">📅 診察日${mode==='copy'?' ※次の通院日に変更してください':''}</div>
+      <div style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:4px 12px;display:flex;align-items:center">
+        <input type="date" id="edit-date" value="${defDate}"
+          style="border:none;background:transparent;color:#fff;font-size:15px;font-family:inherit;outline:none;flex:1;cursor:pointer"
+          onchange="editState.date=this.value.replace(/-/g,'/')">
+      </div>
+      ${mode==='copy'?'<div style="font-size:11px;color:#F9A825;margin-top:4px">⚠️ 日付を変更してから保存してください</div>':''}
+    </div>
+    <div class="edit-sec">
+      <div class="edit-sec-lbl">🏥 病院名</div>
+      <button class="edit-sel-btn" id="edit-hosp-btn" onclick="openListModal('edit-hosp')">
+        <span>${rec.hosp}</span><span>▼</span>
+      </button>
+    </div>
+    <div class="edit-sec">
+      <div class="edit-sec-lbl">✏️ 科目</div>
+      <button class="edit-sel-btn" id="edit-dept-btn" onclick="openListModal('edit-dept')">
+        <span>${rec.dept}</span><span>▼</span>
+      </button>
+    </div>
+    <div class="edit-sec">
+      <div class="edit-sec-lbl">📞 診察</div>
+      <div class="edit-chip-grp">
+        <button class="edit-chip${rec.exam==='なし'?' sel':''}" onclick="setEditChip('exam','n',this)">なし</button>
+        <button class="edit-chip${rec.exam==='あり'?' sel':''}" onclick="setEditChip('exam','y',this)">あり</button>
+      </div>
+    </div>
+    <div class="edit-sec">
+      <div class="edit-sec-lbl">🩻 画像検査</div>
+      <div class="edit-chip-grp">
+        ${['0','xp','ct','mr'].map(v=>`<button class="edit-chip${(imgValMap[rec.img]||'0')===v?' sel':''}" onclick="setEditChip('img','${v}',this)">${v==='0'?'無':v.toUpperCase()}</button>`).join('')}
+      </div>
+    </div>
+    <div class="edit-sec">
+      <div class="edit-sec-lbl">🩸 血液検査</div>
+      <div class="edit-chip-grp">
+        <button class="edit-chip${rec.blood==='なし'?' sel':''}" onclick="setEditChip('blood','n',this)">なし</button>
+        <button class="edit-chip${rec.blood==='あり'?' sel':''}" onclick="setEditChip('blood','y',this)">あり</button>
+      </div>
+    </div>
+    <div class="edit-sec">
+      <div class="edit-sec-lbl">➕ 追加検査</div>
+      <div class="edit-chip-grp">
+        <button class="edit-chip${rec.addTest==='なし'?' sel':''}" onclick="setEditChip('addTest','n',this)">なし</button>
+        <button class="edit-chip${rec.addTest==='あり'?' sel':''}" onclick="setEditChip('addTest','y',this)">あり</button>
+      </div>
+    </div>
+    <div class="edit-sec">
+      <div class="edit-sec-lbl">🏥 治療費</div>
+      <div class="edit-fee-wrap">
+        <span class="edit-fee-yen">¥</span>
+        <input type="text" inputmode="numeric" class="edit-fee-inp" id="edit-treat"
+          value="${rec.treat>0?fmtComma(rec.treat):''}" placeholder="0"
+          oninput="onEditFeeInput(this)" onblur="onEditFeeBlur(this)">
+      </div>
+    </div>
+    <div class="edit-sec">
+      <div class="edit-sec-lbl">💊 薬料金</div>
+      <div class="edit-fee-wrap">
+        <span class="edit-fee-yen">¥</span>
+        <input type="text" inputmode="numeric" class="edit-fee-inp" id="edit-med"
+          value="${rec.med>0?fmtComma(rec.med):''}" placeholder="0"
+          oninput="onEditFeeInput(this)" onblur="onEditFeeBlur(this)">
+      </div>
+    </div>
+    <div class="edit-sec">
+      <div class="edit-sec-lbl">💊 薬の数</div>
+      <div class="drug-stepper" style="background:rgba(255,255,255,.1)">
+        <button class="stepper-btn" onclick="stepEditDrug(-1)">－</button>
+        <span class="stepper-val" id="edit-drug-val" style="color:#fff">${rec.drug}</span>
+        <button class="stepper-btn" onclick="stepEditDrug(1)">＋</button>
+      </div>
+    </div>
+    <div class="edit-sec">
+      <div class="edit-sec-lbl">📝 メモ（8文字）</div>
+      <input type="text" class="edit-inp" id="edit-memo" value="${rec.memo}" maxlength="8">
+    </div>
+    <div style="height:20px"></div>
+  `;
+  editState.editDrug = rec.drug;
+  document.getElementById('edit-screen').classList.add('open');
+}
+
+function onEditFeeInput(el) {
+  const raw = toHankaku(el.value).replace(/[^0-9]/g,'');
+  el.value = raw ? fmtComma(parseInt(raw)) : '';
+}
+function onEditFeeBlur(el) {
+  const n = rawNum(el.value); el.value = n>0 ? fmtComma(n) : '';
+}
+function stepEditDrug(d) {
+  editState.editDrug = Math.max(0,(editState.editDrug||0)+d);
+  document.getElementById('edit-drug-val').textContent = editState.editDrug;
+}
+function setEditChip(field, val, btn) {
+  const imgMap = {0:'無',xp:'XP',ct:'CT',mr:'MR'};
+  if (field==='img')     editState.img     = imgMap[val];
+  else if(field==='exam')    editState.exam    = val==='y'?'あり':'なし';
+  else if(field==='blood')   editState.blood   = val==='y'?'あり':'なし';
+  else if(field==='addTest') editState.addTest = val==='y'?'あり':'なし';
+  btn.parentElement.querySelectorAll('.edit-chip').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+}
+
+function commitEdit() {
+  const treatNum = rawNum(document.getElementById('edit-treat').value);
+  const medNum   = rawNum(document.getElementById('edit-med').value);
+  const dateVal  = document.getElementById('edit-date').value;
+  const ds = dateVal.replace(/-/g,'/');
+  editState.date  = ds; editState.dow   = getDow(ds);
+  editState.treat = treatNum; editState.med = medNum;
+  editState.drug  = editState.editDrug||0;
+  editState.memo  = document.getElementById('edit-memo').value.slice(0,8);
+
+  showLoading(editMode==='copy'?'複製して保存中...':'更新中...');
+  if (editMode==='copy') {
+    const newRec = {...editState, id:Date.now()};
+    gasCall('saveRecord', newRec,
+      res => {
+        hideLoading();
+        records.unshift(newRec);
+        closeEdit(); closeDetail();
+        showToast('📋 複製して保存しました'); renderHist();
+      },
+      () => hideLoading()
+    );
+  } else {
+    const updated = {...editState, id:editId};
+    gasCall('updateRecord', updated,
+      res => {
+        hideLoading();
+        const idx = records.findIndex(r=>r.id===editId);
+        if(idx>=0) records[idx]=updated;
+        closeEdit(); closeDetail();
+        showToast('✅ 更新しました'); renderHist();
+      },
+      () => hideLoading()
+    );
+  }
+}
+
+function closeEdit() { document.getElementById('edit-screen').classList.remove('open'); }
+
+// ══════════════════════════════════════════════════════
+// ⑦ PDF生成：ゼロ埋めしたmonthをGASに渡す
+// ══════════════════════════════════════════════════════
+function doPdf(hosp, year, month) {
+  const mo = padMonth(month); // ⑦ ゼロ埋め統一
+  showLoading('PDF生成中...');
+  if (IS_GAS) {
+    google.script.run
+      .withSuccessHandler(res => {
+        hideLoading();
+        if (res && res.ok) showToast('📄 PDF保存完了: ' + (res.fileName||''), 'info');
+        else showToast('⚠️ PDF生成エラー: ' + (res ? res.error : ''), 'error');
+      })
+      .withFailureHandler(err => {
+        hideLoading();
+        showToast('⚠️ PDFエラー: ' + (err.message||err), 'error');
+        console.error('[PDFエラー]', err);
+      })
+      .handlePdfFromClient({ hosp: hosp||null, year, month: mo||null });
+  } else {
+    hideLoading();
+    alert(`PDF生成完了\n${hosp||'全病院'} ${year}年${mo?mo+'月':''}\nDriveへ保存しました`);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// 起動
+// ══════════════════════════════════════════════════════
+initApp();
 </script>
 </body>
 </html>
