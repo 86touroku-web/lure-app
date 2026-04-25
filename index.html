@@ -4,507 +4,187 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>ルアー在庫管理</title>
-
-<!-- html5-qrcode CDN -->
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-
+<script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
 <style>
-/* ══════════════════════════════════════
-   BASE RESET
-══════════════════════════════════════ */
-*, *::before, *::after {
-  margin:0; padding:0; box-sizing:border-box;
-  -webkit-tap-highlight-color:transparent;
-  -webkit-touch-callout:none;
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;}
+input,select,textarea,button{font-family:inherit;-webkit-appearance:none;appearance:none;}
+html{font-size:62.5%;overscroll-behavior:none;-webkit-text-size-adjust:100%;}
+body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size:1.4rem;background:linear-gradient(135deg,#1a6b3c 0%,#0d4f8c 100%);width:100%;height:100dvh;overflow:hidden;position:relative;-webkit-font-smoothing:antialiased;}
+*::-webkit-scrollbar{display:none;}
+:root{
+  --green-mid:#25a55a;--blue-mid:#1976d2;--blue-light:#42a5f5;--teal:#00bcd4;
+  --yellow:#ffd740;--red:#f44336;--orange:#ff9800;
+  --card-bg:rgba(255,255,255,0.96);--card-bg2:rgba(255,255,255,0.15);
+  --text-dark:#1a1a2e;--text-mid:#37474f;
+  --tab-h:7rem;--h-inp:4.4rem;--h-btn:4.8rem;--r:.8rem;
+  --fs-xs:1.1rem;--fs-sm:1.25rem;--fs-md:1.4rem;--fs-lg:1.7rem;
 }
-input, select, textarea, button {
-  font-family:inherit;
-  -webkit-appearance:none;
-  appearance:none;
+/* ── LOADING ── */
+.loading-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999;flex-direction:column;align-items:center;justify-content:center;gap:1.2rem;}
+.loading-ov.show{display:flex;}
+.spinner{width:4rem;height:4rem;border:.4rem solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-msg{color:#fff;font-size:var(--fs-md);font-weight:700;}
+/* ── TOAST ── */
+.toast{display:none;position:fixed;top:1.6rem;left:50%;transform:translateX(-50%);z-index:998;padding:.8rem 2rem;border-radius:2rem;font-size:var(--fs-sm);font-weight:700;color:#fff;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.3);background:var(--green-mid);}
+.toast.err{background:var(--red);}
+.toast.show{display:block;animation:fadeInOut 2.5s ease forwards;}
+@keyframes fadeInOut{0%{opacity:0;transform:translateX(-50%) translateY(-8px);}15%{opacity:1;transform:translateX(-50%) translateY(0);}75%{opacity:1;}100%{opacity:0;}}
+/* ── DIALOG ── */
+.dialog-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:900;align-items:center;justify-content:center;padding:0 1.6rem;}
+.dialog-ov.open{display:flex;}
+.dialog-box{background:#fff;border-radius:1.6rem;padding:2.4rem 2rem 2rem;width:100%;max-width:40rem;box-shadow:0 8px 32px rgba(0,0,0,.3);}
+.dialog-title{font-size:var(--fs-lg);font-weight:800;color:var(--text-dark);margin-bottom:1rem;text-align:center;}
+.dialog-msg{font-size:var(--fs-md);color:var(--text-mid);margin-bottom:1.6rem;line-height:1.6;text-align:center;white-space:pre-wrap;}
+.dialog-btns{display:flex;gap:1rem;}
+.dialog-cancel{flex:1;border-radius:var(--r);cursor:pointer;font-weight:700;background:#fff;border:.2rem solid var(--red);color:var(--red);font-size:var(--fs-md);height:var(--h-btn);}
+.dialog-ok{flex:1;border-radius:var(--r);cursor:pointer;font-weight:700;background:var(--blue-mid);border:none;color:#fff;font-size:var(--fs-md);height:var(--h-btn);}
+/* ── SCAN ── */
+.scan-ov{display:none;position:fixed;inset:0;background:#000;z-index:800;flex-direction:column;align-items:center;justify-content:center;}
+.scan-ov.open{display:flex;}
+.scan-wrap{position:relative;width:100%;max-width:48rem;}
+#scan-video{width:100%;display:block;}
+.scan-guide{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:70%;height:12rem;border:.3rem solid var(--yellow);border-radius:.8rem;box-shadow:0 0 0 999px rgba(0,0,0,.45);}
+.scan-line{position:absolute;top:0;left:0;right:0;height:.3rem;background:var(--yellow);animation:scanLine 2s ease-in-out infinite;}
+@keyframes scanLine{0%{top:0;}50%{top:calc(100% - .3rem);}100%{top:0;}}
+.scan-label{color:#fff;font-size:var(--fs-md);font-weight:700;margin-top:2rem;text-align:center;}
+.scan-cancel{margin-top:2rem;padding:1rem 3rem;background:rgba(255,255,255,.15);border:.2rem solid rgba(255,255,255,.5);border-radius:2rem;color:#fff;font-size:var(--fs-md);font-weight:700;cursor:pointer;}
+/* ── TAB ── */
+.tab-bar{position:absolute;bottom:0;left:0;right:0;height:var(--tab-h);background:rgba(13,79,140,.97);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -2px 12px rgba(0,0,0,.25);}
+.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3rem;cursor:pointer;border:none;background:none;padding:0;color:rgba(255,255,255,.5);border-top:.3rem solid transparent;}
+.tab-btn.active{color:#fff;border-top-color:var(--yellow);}
+.tab-icon{font-size:2.4rem;line-height:1;}
+.tab-label{font-size:var(--fs-xs);font-weight:700;}
+/* ── SCREENS ── */
+.screen{position:absolute;top:0;left:0;right:0;bottom:var(--tab-h);overflow-y:auto;overflow-x:hidden;display:none;padding:.8rem .8rem 2rem;overscroll-behavior:none;-webkit-overflow-scrolling:touch;}
+.screen.active{display:block;}
+.page-title{text-align:center;font-size:var(--fs-lg);font-weight:800;color:#fff;margin-bottom:.8rem;}
+/* ── ブロックカード ── */
+.block-card{background:var(--card-bg);border-radius:1.2rem;padding:1rem;margin-bottom:.8rem;box-shadow:0 2px 8px rgba(0,0,0,.12);}
+.block-title{font-size:var(--fs-sm);font-weight:800;color:#fff;padding:.3rem .9rem;border-radius:.5rem;margin-bottom:.8rem;display:inline-block;}
+.bt-red{background:#e53935;}.bt-yellow{background:#f57f17;}.bt-blue{background:#1565c0;}.bt-orange{background:#e65100;}
+/* ── 共通ボタン・入力 ── */
+.inp{width:100%;background:#f0f4f8;border:.15rem solid #cfd8dc;border-radius:var(--r);padding:0 1rem;color:var(--text-dark);outline:none;font-size:var(--fs-md);font-weight:600;height:var(--h-inp);}
+.inp:focus{border-color:var(--blue-mid);background:#fff;}
+.sel-btn{width:100%;background:#f0f4f8;border:.15rem solid #cfd8dc;border-radius:var(--r);padding:0 1rem;color:var(--text-dark);cursor:pointer;font-size:var(--fs-md);font-weight:600;height:var(--h-inp);display:flex;align-items:center;justify-content:space-between;}
+.big-btn{width:100%;border-radius:var(--r);border:none;cursor:pointer;font-weight:800;color:#fff;height:var(--h-btn);font-size:var(--fs-md);display:flex;align-items:center;justify-content:center;gap:.4rem;box-shadow:0 2px 8px rgba(0,0,0,.2);}
+.big-btn:active{opacity:.8;}
+.btn-scan{background:linear-gradient(90deg,var(--green-mid),var(--teal));}
+.btn-save{background:linear-gradient(90deg,var(--blue-mid),var(--blue-light));}
+.btn-clear{background:linear-gradient(90deg,#78909c,#90a4ae);}
+.btn-danger{background:linear-gradient(90deg,var(--red),var(--orange));}
+.btn-search{background:linear-gradient(90deg,var(--blue-mid),var(--blue-light));}
+.btn-row{display:flex;gap:.8rem;margin-bottom:.8rem;}
+.btn-row .big-btn{flex:1;}
+/* ── A: 検索ブロック ── */
+.search-block{display:flex;gap:.6rem;align-items:stretch;}
+.scan-col{flex:0 0 9rem;}
+/* スキャンボタンと右側の高さを完全一致させる */
+.scan-col .big-btn{
+  height:100%;
+  min-height:calc(var(--h-inp) * 2 + .4rem);
+  flex-direction:column;gap:.3rem;font-size:var(--fs-sm);line-height:1.3;
 }
-html {
-  font-size:62.5%;
-  overscroll-behavior:none;
-  -webkit-text-size-adjust:100%;
+.search-right{flex:1;display:flex;flex-direction:column;gap:.4rem;}
+.search-right .inp{height:var(--h-inp);flex:1;}
+.search-right .btn-search{height:var(--h-inp);font-size:var(--fs-sm);}
+/* ── B: 商品情報ブロック ── */
+.product-layout{display:flex;gap:.8rem;align-items:flex-start;}
+/* 画像：拡大（紺丸サイズ） */
+.product-img-col{flex:0 0 13rem;}
+.product-img{width:13rem;height:13rem;border-radius:var(--r);object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,.15);background:#f5f5f5;display:block;}
+.no-img{width:13rem;height:13rem;background:#eceff1;border-radius:var(--r);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#90a4ae;font-size:1.2rem;gap:.3rem;}
+/* 右列：縦一直線・凸凹なし */
+.product-info-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:.4rem;}
+.info-row{display:grid;grid-template-columns:5rem 1fr;align-items:baseline;gap:.3rem;}
+.info-lbl{font-size:var(--fs-xs);font-weight:700;color:var(--blue-mid);white-space:nowrap;}
+.info-val{font-size:var(--fs-sm);font-weight:600;color:var(--text-dark);line-height:1.3;word-break:break-all;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* ── C: 発送処理ブロック ── */
+/* ステータス行：1行表示 */
+.c-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem;}
+.c-lbl{font-size:var(--fs-sm);font-weight:700;color:var(--blue-mid);white-space:nowrap;flex:0 0 5.5rem;}
+.c-val{flex:1;}
+/* 現在のステータス表示ボタン（横幅2倍・表示のみ） */
+.cur-status-btn{
+  width:100%;height:3.8rem;border-radius:var(--r);border:none;
+  font-size:var(--fs-md);font-weight:800;cursor:default;
+  background:linear-gradient(90deg,#1565c0,#1976d2);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 6px rgba(0,0,0,.2);letter-spacing:.05em;
 }
-body {
-  font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;
-  font-size:1.4rem;
-  background: linear-gradient(135deg, #1a6b3c 0%, #0d4f8c 100%);
-  width:100%; height:100dvh;
-  overflow:hidden; position:relative;
-  -webkit-font-smoothing:antialiased;
-}
-*::-webkit-scrollbar { display:none; }
-
-/* ══════════════════════════════════════
-   CSS 変数
-══════════════════════════════════════ */
-:root {
-  --green-dark:  #1a6b3c;
-  --green-mid:   #25a55a;
-  --green-light: #4cca80;
-  --blue-dark:   #0d4f8c;
-  --blue-mid:    #1976d2;
-  --blue-light:  #42a5f5;
-  --teal:        #00bcd4;
-  --yellow:      #ffd740;
-  --orange:      #ff9800;
-  --red:         #f44336;
-  --white:       #ffffff;
-  --card-bg:     rgba(255,255,255,0.95);
-  --card-bg2:    rgba(255,255,255,0.15);
-  --text-dark:   #1a1a2e;
-  --text-mid:    #37474f;
-  --text-light:  rgba(255,255,255,0.85);
-  --tab-h:       7rem;
-  --h-inp:       4.8rem;
-  --h-btn:       5rem;
-  --r:           1rem;
-  --fs-xs:       1.1rem;
-  --fs-sm:       1.3rem;
-  --fs-md:       1.5rem;
-  --fs-lg:       1.8rem;
-  --fs-xl:       2.2rem;
-}
-
-/* ══════════════════════════════════════
-   LOADING
-══════════════════════════════════════ */
-.loading-ov {
-  display:none; position:fixed; inset:0;
-  background:rgba(0,0,0,0.6); z-index:999;
-  flex-direction:column; align-items:center; justify-content:center; gap:1.2rem;
-}
-.loading-ov.show { display:flex; }
-.spinner {
-  width:4rem; height:4rem;
-  border:.4rem solid rgba(255,255,255,0.3);
-  border-top-color:#fff; border-radius:50%;
-  animation:spin .8s linear infinite;
-}
-@keyframes spin { to { transform:rotate(360deg); } }
-.loading-msg { color:#fff; font-size:var(--fs-md); font-weight:700; }
-
-/* ══════════════════════════════════════
-   TOAST
-══════════════════════════════════════ */
-.toast {
-  display:none; position:fixed; top:1.6rem; left:50%; transform:translateX(-50%);
-  z-index:998; padding:.8rem 2rem; border-radius:2rem;
-  font-size:var(--fs-sm); font-weight:700; color:#fff;
-  white-space:nowrap; box-shadow:0 4px 12px rgba(0,0,0,0.3);
-  background:var(--green-mid);
-}
-.toast.err { background:var(--red); }
-.toast.show { display:block; animation:fadeInOut 2.5s ease forwards; }
-@keyframes fadeInOut {
-  0%   { opacity:0; transform:translateX(-50%) translateY(-8px); }
-  15%  { opacity:1; transform:translateX(-50%) translateY(0); }
-  75%  { opacity:1; }
-  100% { opacity:0; }
-}
-
-/* ══════════════════════════════════════
-   ダイアログ
-══════════════════════════════════════ */
-.dialog-ov {
-  display:none; position:fixed; inset:0;
-  background:rgba(0,0,0,0.7); z-index:900;
-  align-items:center; justify-content:center; padding:0 1.6rem;
-}
-.dialog-ov.open { display:flex; }
-.dialog-box {
-  background:#fff; border-radius:1.6rem;
-  padding:2.4rem 2rem 2rem;
-  width:100%; max-width:40rem;
-  box-shadow:0 8px 32px rgba(0,0,0,0.3);
-}
-.dialog-title { font-size:var(--fs-lg); font-weight:800; color:var(--text-dark); margin-bottom:1rem; text-align:center; }
-.dialog-msg   { font-size:var(--fs-md); color:var(--text-mid); margin-bottom:1.6rem; line-height:1.6; text-align:center; white-space:pre-wrap; }
-.dialog-btns  { display:flex; gap:1rem; }
-.dialog-cancel {
-  flex:1; border-radius:var(--r); cursor:pointer; font-weight:700;
-  background:#fff; border:.2rem solid var(--red);
-  color:var(--red); font-size:var(--fs-md); height:var(--h-btn);
-}
-.dialog-ok {
-  flex:1; border-radius:var(--r); cursor:pointer; font-weight:700;
-  background:var(--blue-mid); border:none;
-  color:#fff; font-size:var(--fs-md); height:var(--h-btn);
-}
-
-/* ══════════════════════════════════════
-   スキャナーモーダル（html5-qrcode用）
-══════════════════════════════════════ */
-.scanner-ov {
-  display:none; position:fixed; inset:0;
-  background:rgba(0,0,0,0.92); z-index:950;
-  flex-direction:column; align-items:center;
-}
-.scanner-ov.open { display:flex; }
-
-.scanner-header {
-  width:100%; padding:1.2rem 1.6rem;
-  display:flex; align-items:center; justify-content:space-between;
-  background:rgba(0,0,0,0.5);
-  flex-shrink:0;
-}
-.scanner-title {
-  color:#fff; font-size:var(--fs-lg); font-weight:800;
-}
-.scanner-close {
-  width:4rem; height:4rem; border-radius:50%;
-  background:rgba(255,255,255,0.15); border:none; cursor:pointer;
-  font-size:2rem; color:#fff;
-  display:flex; align-items:center; justify-content:center;
-}
-
-.scanner-viewport {
-  flex:1; width:100%; position:relative;
-  display:flex; align-items:center; justify-content:center;
-  overflow:hidden;
-}
-
-/* html5-qrcodeが生成するvideoをフルサイズに */
-#qr-reader {
-  width:100% !important;
-  max-width:100% !important;
-}
-#qr-reader video {
-  width:100% !important;
-  height:auto !important;
-  object-fit:cover;
-}
-/* html5-qrcode デフォルトUIを非表示 */
-#qr-reader img { display:none !important; }
-#qr-reader__dashboard_section_csr span { display:none !important; }
-#qr-reader__dashboard { display:none !important; }
-#qr-reader__status_span { display:none !important; }
-#qr-reader__header_message { display:none !important; }
-
-/* スキャン枠オーバーレイ */
-.scan-frame-overlay {
-  position:absolute; inset:0; pointer-events:none;
-  display:flex; align-items:center; justify-content:center;
-}
-.scan-frame {
-  position:relative;
-  width:min(72vw, 28rem);
-  height:min(72vw, 28rem);
-}
-.scan-frame::before, .scan-frame::after,
-.scan-frame .c3, .scan-frame .c4 {
-  content:''; position:absolute;
-  width:3rem; height:3rem;
-  border-color:#4cca80; border-style:solid;
-}
-.scan-frame::before { top:0; left:0; border-width:.4rem 0 0 .4rem; border-radius:.4rem 0 0 0; }
-.scan-frame::after  { top:0; right:0; border-width:.4rem .4rem 0 0; border-radius:0 .4rem 0 0; }
-.scan-frame .c3     { bottom:0; left:0; border-width:0 0 .4rem .4rem; border-radius:0 0 0 .4rem; }
-.scan-frame .c4     { bottom:0; right:0; border-width:0 .4rem .4rem 0; border-radius:0 0 .4rem 0; }
-/* スキャンライン */
-.scan-line {
-  position:absolute;
-  left:2%; right:2%; height:.2rem;
-  background:linear-gradient(90deg, transparent, #4cca80, #00bcd4, #4cca80, transparent);
-  box-shadow:0 0 8px #4cca80;
-  animation:scanline 2s ease-in-out infinite;
-}
-@keyframes scanline {
-  0%   { top:4%; }
-  50%  { top:92%; }
-  100% { top:4%; }
-}
-
-.scanner-hint {
-  flex-shrink:0; padding:1rem 1.6rem 2rem;
-  text-align:center; color:rgba(255,255,255,0.75);
-  font-size:var(--fs-sm); line-height:1.6;
-}
-
-/* カメラ切り替えボタン */
-.scanner-cam-btn {
-  margin-bottom:.8rem;
-  padding:.6rem 1.6rem;
-  border-radius:2rem;
-  background:rgba(255,255,255,0.15);
-  border:.1rem solid rgba(255,255,255,0.3);
-  color:#fff; font-size:var(--fs-sm); font-weight:700; cursor:pointer;
-}
-
-/* ══════════════════════════════════════
-   TAB BAR
-══════════════════════════════════════ */
-.tab-bar {
-  position:absolute; bottom:0; left:0; right:0; height:var(--tab-h);
-  background:rgba(13,79,140,0.97);
-  display:flex; z-index:100;
-  padding-bottom:env(safe-area-inset-bottom);
-  box-shadow:0 -2px 12px rgba(0,0,0,0.25);
-}
-.tab-btn {
-  flex:1; display:flex; flex-direction:column; align-items:center;
-  justify-content:center; gap:.3rem; cursor:pointer;
-  border:none; background:none; padding:0;
-  color:rgba(255,255,255,0.5);
-  border-top:.3rem solid transparent;
-  transition:color .2s;
-}
-.tab-btn.active { color:#fff; border-top-color:var(--yellow); }
-.tab-icon { font-size:2.4rem; line-height:1; }
-.tab-label { font-size:var(--fs-xs); font-weight:700; }
-
-/* ══════════════════════════════════════
-   SCREENS
-══════════════════════════════════════ */
-.screen {
-  position:absolute; top:0; left:0; right:0;
-  bottom:var(--tab-h);
-  overflow-y:auto; overflow-x:hidden;
-  display:none; padding:1.2rem .8rem 2rem;
-  overscroll-behavior:none;
-  -webkit-overflow-scrolling:touch;
-}
-.screen.active { display:block; }
-
-/* ══════════════════════════════════════
-   共通パーツ
-══════════════════════════════════════ */
-.page-title {
-  text-align:center; font-size:var(--fs-lg); font-weight:800;
-  color:#fff; margin-bottom:1.2rem;
-  text-shadow:0 1px 4px rgba(0,0,0,0.3);
-}
-.card {
-  background:var(--card-bg); border-radius:1.2rem;
-  padding:1.2rem; margin-bottom:1rem;
-  box-shadow:0 2px 8px rgba(0,0,0,0.12);
-}
-.row-label {
-  font-size:var(--fs-xs); font-weight:700; color:var(--blue-mid);
-  margin-bottom:.3rem;
-}
-.row-val {
-  font-size:var(--fs-md); font-weight:600; color:var(--text-dark);
-  line-height:1.4;
-}
-.inp {
-  width:100%; background:#f0f4f8;
-  border:.15rem solid #cfd8dc; border-radius:var(--r);
-  padding:0 1rem; color:var(--text-dark); outline:none;
-  font-size:var(--fs-md); font-weight:600;
-  height:var(--h-inp); line-height:var(--h-inp);
-}
-.inp:focus { border-color:var(--blue-mid); background:#fff; }
-.sel-btn {
-  width:100%; background:#f0f4f8;
-  border:.15rem solid #cfd8dc; border-radius:var(--r);
-  padding:0 1rem; color:var(--text-dark); cursor:pointer;
-  font-size:var(--fs-md); font-weight:600;
-  height:var(--h-inp);
-  display:flex; align-items:center; justify-content:space-between;
-  text-align:left;
-}
-.sel-btn:focus { border-color:var(--blue-mid); }
-.big-btn {
-  width:100%; border-radius:var(--r); border:none; cursor:pointer;
-  font-weight:800; color:#fff;
-  height:var(--h-btn); font-size:var(--fs-md);
-  display:flex; align-items:center; justify-content:center;
-  gap:.5rem; margin-bottom:.8rem;
-  box-shadow:0 2px 8px rgba(0,0,0,0.2);
-  transition:opacity .15s;
-}
-.big-btn:active { opacity:.8; }
-.btn-scan    { background:linear-gradient(90deg,var(--green-mid),var(--teal)); }
-.btn-save    { background:linear-gradient(90deg,var(--blue-mid),var(--blue-light)); }
-.btn-clear   { background:linear-gradient(90deg,#78909c,#90a4ae); }
-.btn-danger  { background:linear-gradient(90deg,var(--red),var(--orange)); }
-.btn-row { display:flex; gap:.8rem; margin-bottom:.8rem; }
-.btn-row .big-btn { flex:1; margin-bottom:0; }
-
-/* ステータスバッジ */
-.status-badge {
-  display:inline-block; padding:.3rem 1rem;
-  border-radius:2rem; font-size:var(--fs-xs); font-weight:800;
-}
-.st-在庫   { background:#e3f2fd; color:#1565c0; }
-.st-検品済 { background:#e8f5e9; color:#2e7d32; }
-.st-保品   { background:#fff8e1; color:#f57f17; }
-.st-No有   { background:#fce4ec; color:#880e4f; }
-.st-出タイ待 { background:#f3e5f5; color:#6a1b9a; }
-.st-出品   { background:#e0f7fa; color:#006064; }
-.st-販売済 { background:#efebe9; color:#4e342e; }
-
-/* チップグループ */
-.chip-grp { display:flex; flex-wrap:wrap; gap:.5rem; }
-.chip {
-  padding:.5rem .4rem; border-radius:.6rem;
-  border:.15rem solid #cfd8dc; cursor:pointer;
-  font-size:1.25rem; font-weight:700;
-  background:#f0f4f8; color:var(--text-mid);
-  transition:all .15s; text-align:center;
-}
-.chip.sel {
-  background:var(--blue-mid); color:#fff;
-  border-color:var(--blue-mid);
-}
-
-/* 区切り線 */
-.divider { height:.1rem; background:#e0e0e0; margin:.8rem 0; }
-
-/* ══════════════════════════════════════
-   TAB1: 発送作業
-══════════════════════════════════════ */
-#ship-empty {
-  text-align:center; padding:3rem 1rem;
-  color:rgba(255,255,255,0.7); font-size:var(--fs-md);
-  line-height:1.8;
-}
-#ship-empty .empty-icon { font-size:4rem; margin-bottom:1rem; }
-
-/* 商品画像 */
-.product-img-wrap { text-align:center; margin-bottom:1rem; }
-.product-img {
-  max-width:100%; max-height:16rem;
-  border-radius:var(--r); object-fit:contain;
-  box-shadow:0 2px 8px rgba(0,0,0,0.15);
-  background:#f5f5f5;
-}
-.no-img {
-  width:100%; height:10rem;
-  background:#eceff1; border-radius:var(--r);
-  display:flex; align-items:center; justify-content:center;
-  color:#90a4ae; font-size:var(--fs-sm);
-}
-
-/* 商品情報グリッド */
-.info-grid { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; }
-.info-item { }
-.info-item.full { grid-column:1/-1; }
-
-/* ══════════════════════════════════════
-   TAB2: 一括編集
-══════════════════════════════════════ */
-.bulk-list { margin-bottom:1rem; }
-.bulk-item {
-  background:var(--card-bg); border-radius:var(--r);
-  padding:.8rem 1rem; margin-bottom:.6rem;
-  display:flex; align-items:center; gap:.8rem;
-  box-shadow:0 1px 4px rgba(0,0,0,0.1);
-}
-.bulk-item-no {
-  width:2.4rem; height:2.4rem; border-radius:50%;
-  background:var(--blue-mid); color:#fff;
-  font-size:var(--fs-xs); font-weight:800;
-  display:flex; align-items:center; justify-content:center;
-  flex-shrink:0;
-}
-.bulk-item-info { flex:1; min-width:0; }
-.bulk-item-name { font-size:var(--fs-sm); font-weight:700; color:var(--text-dark); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.bulk-item-sub  { font-size:var(--fs-xs); color:#78909c; margin-top:.2rem; }
-.bulk-item-del  {
-  width:3rem; height:3rem; border-radius:50%;
-  background:var(--red); color:#fff; border:none; cursor:pointer;
-  font-size:1.6rem; display:flex; align-items:center; justify-content:center;
-  flex-shrink:0;
-}
-.bulk-count {
-  text-align:center; font-size:var(--fs-sm); font-weight:700;
-  color:rgba(255,255,255,0.8); margin-bottom:.8rem;
-}
-
-/* ══════════════════════════════════════
-   ポップアップ（リスト選択）
-══════════════════════════════════════ */
-.popup-ov {
-  display:none; position:fixed; inset:0;
-  background:rgba(0,0,0,0.6); z-index:850;
-  align-items:flex-end; justify-content:center;
-}
-.popup-ov.open { display:flex; }
-.popup-sheet {
-  background:#fff; border-radius:1.6rem 1.6rem 0 0;
-  width:100%; max-width:48rem;
-  max-height:70vh; display:flex; flex-direction:column;
-  padding-bottom:env(safe-area-inset-bottom);
-}
-.popup-head {
-  padding:1.2rem 1.6rem .8rem;
-  display:flex; align-items:center; justify-content:space-between;
-  border-bottom:.1rem solid #e0e0e0;
-}
-.popup-title { font-size:var(--fs-md); font-weight:800; color:var(--text-dark); }
-.popup-close {
-  width:3rem; height:3rem; border-radius:50%;
-  background:#eceff1; border:none; cursor:pointer;
-  font-size:1.8rem; display:flex; align-items:center; justify-content:center;
-  color:var(--text-mid);
-}
-.popup-list { overflow-y:auto; flex:1; padding:.4rem 0; }
-.popup-item {
-  padding:1rem 1.6rem; font-size:var(--fs-md); cursor:pointer;
-  color:var(--text-dark); font-weight:600;
-  border-bottom:.1rem solid #f5f5f5;
-  transition:background .1s;
-}
-.popup-item:active { background:#e3f2fd; }
-.popup-item.selected { color:var(--blue-mid); font-weight:800; }
-
-/* ══════════════════════════════════════
-   一括編集フォーム
-══════════════════════════════════════ */
-.bulk-form-section {
-  background:var(--card-bg2); border-radius:1.2rem;
-  padding:1rem; margin-bottom:1rem;
-  border:.1rem solid rgba(255,255,255,0.2);
-}
-.bulk-form-title {
-  font-size:var(--fs-sm); font-weight:800; color:#fff;
-  margin-bottom:.8rem;
-}
-.form-row { margin-bottom:.8rem; }
-.form-label {
-  font-size:var(--fs-xs); font-weight:700;
-  color:rgba(255,255,255,0.85); margin-bottom:.3rem;
-}
-
-/* GAS URL設定バナー */
-.gas-url-banner {
-  background:rgba(255,200,0,0.15);
-  border:.15rem solid rgba(255,200,0,0.5);
-  border-radius:var(--r); padding:1rem;
-  margin-bottom:1rem; color:#fff;
-  font-size:var(--fs-xs); line-height:1.6;
-}
-.gas-url-banner strong { color:var(--yellow); }
+/* ステータスチップ（販売済を除く6個） */
+.chip-grp{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.5rem;}
+.chip{padding:.35rem .9rem;border-radius:2rem;border:.15rem solid #cfd8dc;cursor:pointer;font-size:var(--fs-sm);font-weight:700;background:#f0f4f8;color:var(--text-mid);white-space:nowrap;}
+.chip.sel{background:var(--blue-mid);color:#fff;border-color:var(--blue-mid);}
+.divider{height:.1rem;background:#e0e0e0;margin:.5rem 0;}
+/* 販売済日・販売金額：1行表示 */
+.edit-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;}
+.edit-lbl{font-size:var(--fs-sm);font-weight:700;color:var(--blue-mid);white-space:nowrap;flex:0 0 5.5rem;}
+.edit-inp{flex:1;background:#f0f4f8;border:.15rem solid #cfd8dc;border-radius:var(--r);padding:0 .8rem;color:var(--text-dark);outline:none;font-size:var(--fs-md);font-weight:600;height:4rem;}
+.edit-inp:focus{border-color:var(--blue-mid);background:#fff;}
+/* 販売金額 ¥プレフィックス付き */
+.price-wrap{flex:1;display:flex;align-items:center;background:#f0f4f8;border:.15rem solid #cfd8dc;border-radius:var(--r);height:4rem;overflow:hidden;}
+.price-prefix{padding:0 .2rem 0 .8rem;font-size:var(--fs-md);font-weight:700;color:var(--text-mid);}
+.price-inp{flex:1;border:none;background:transparent;padding:0 .8rem 0 0;color:var(--text-dark);font-size:var(--fs-md);font-weight:600;height:100%;outline:none;}
+/* ── D: 詳細情報ブロック ── */
+.detail-grid{display:grid;grid-template-columns:5.5rem 1fr;gap:.45rem .5rem;align-items:baseline;}
+.d-lbl{font-size:var(--fs-xs);font-weight:700;color:var(--blue-mid);white-space:nowrap;}
+.d-val{font-size:var(--fs-sm);font-weight:600;color:var(--text-dark);word-break:break-all;}
+/* ── 空状態 ── */
+#ship-empty{text-align:center;padding:2.5rem 1rem;color:rgba(255,255,255,.7);font-size:var(--fs-md);line-height:1.8;}
+#ship-empty .empty-icon{font-size:4rem;margin-bottom:1rem;}
+/* ── 一括編集 ── */
+.bulk-item{background:var(--card-bg);border-radius:var(--r);padding:.7rem 1rem;margin-bottom:.5rem;display:flex;align-items:center;gap:.8rem;box-shadow:0 1px 4px rgba(0,0,0,.1);}
+.bulk-item-no{width:2.4rem;height:2.4rem;border-radius:50%;background:var(--blue-mid);color:#fff;font-size:var(--fs-xs);font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.bulk-item-info{flex:1;min-width:0;}
+.bulk-item-name{font-size:var(--fs-sm);font-weight:700;color:var(--text-dark);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.bulk-item-sub{font-size:var(--fs-xs);color:#78909c;margin-top:.2rem;}
+.bulk-item-del{width:3rem;height:3rem;border-radius:50%;background:var(--red);color:#fff;border:none;cursor:pointer;font-size:1.6rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.bulk-count{text-align:center;font-size:var(--fs-sm);font-weight:700;color:rgba(255,255,255,.8);margin-bottom:.6rem;}
+.bulk-form-section{background:var(--card-bg2);border-radius:1.2rem;padding:1rem;margin-bottom:.8rem;border:.1rem solid rgba(255,255,255,.2);}
+.bulk-form-title{font-size:var(--fs-sm);font-weight:800;color:#fff;margin-bottom:.6rem;}
+.form-row{margin-bottom:.7rem;}
+.form-label{font-size:var(--fs-xs);font-weight:700;color:rgba(255,255,255,.85);margin-bottom:.3rem;}
+/* ── ポップアップ ── */
+.popup-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:850;align-items:flex-end;justify-content:center;}
+.popup-ov.open{display:flex;}
+.popup-sheet{background:#fff;border-radius:1.6rem 1.6rem 0 0;width:100%;max-width:48rem;max-height:70vh;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom);}
+.popup-head{padding:1.2rem 1.6rem .8rem;display:flex;align-items:center;justify-content:space-between;border-bottom:.1rem solid #e0e0e0;}
+.popup-title{font-size:var(--fs-md);font-weight:800;color:var(--text-dark);}
+.popup-close{width:3rem;height:3rem;border-radius:50%;background:#eceff1;border:none;cursor:pointer;font-size:1.8rem;display:flex;align-items:center;justify-content:center;}
+.popup-list{overflow-y:auto;flex:1;padding:.4rem 0;}
+.popup-item{padding:1rem 1.6rem;font-size:var(--fs-md);cursor:pointer;color:var(--text-dark);font-weight:600;border-bottom:.1rem solid #f5f5f5;}
+.popup-item:active{background:#e3f2fd;}
+.popup-item.selected{color:var(--blue-mid);font-weight:800;}
 </style>
 </head>
 <body>
 
 <!-- ローディング -->
-<div class="loading-ov" id="loading-ov">
-  <div class="spinner"></div>
-  <div class="loading-msg" id="loading-msg">読み込み中...</div>
-</div>
-
+<div class="loading-ov" id="loading-ov"><div class="spinner"></div><div class="loading-msg" id="loading-msg">読み込み中...</div></div>
 <!-- トースト -->
 <div class="toast" id="toast"></div>
-
 <!-- ダイアログ -->
 <div class="dialog-ov" id="dialog-ov">
   <div class="dialog-box">
     <div class="dialog-title" id="dialog-title"></div>
-    <div class="dialog-msg"   id="dialog-msg"></div>
+    <div class="dialog-msg" id="dialog-msg"></div>
     <div class="dialog-btns">
       <button class="dialog-cancel" id="dialog-cancel" style="display:none">キャンセル</button>
-      <button class="dialog-ok"     id="dialog-ok">OK</button>
+      <button class="dialog-ok" id="dialog-ok">OK</button>
     </div>
   </div>
 </div>
-
-<!-- リスト選択ポップアップ -->
+<!-- カメラスキャン -->
+<div class="scan-ov" id="scan-ov">
+  <div class="scan-wrap">
+    <video id="scan-video" playsinline autoplay muted></video>
+    <div class="scan-guide"><div class="scan-line"></div></div>
+  </div>
+  <div class="scan-label">バーコードをガイド枠に合わせてください</div>
+  <button class="scan-cancel" onclick="stopScan()">キャンセル</button>
+</div>
+<!-- ポップアップ -->
 <div class="popup-ov" id="popup-ov">
   <div class="popup-sheet">
     <div class="popup-head">
@@ -515,1018 +195,382 @@ body {
   </div>
 </div>
 
-<!-- ══════════════════════════════════
-     スキャナーモーダル（html5-qrcode）
-══════════════════════════════════ -->
-<div class="scanner-ov" id="scanner-ov">
-  <div class="scanner-header">
-    <div class="scanner-title">📷 バーコードスキャン</div>
-    <button class="scanner-close" onclick="closeScanner()">✕</button>
-  </div>
+<!-- ════════════════════════════════
+     TAB1: 発送作業
+════════════════════════════════ -->
+<div class="screen active" id="screen-ship">
+  <div class="page-title">🚚 発送作業</div>
 
-  <div class="scanner-viewport">
-    <!-- html5-qrcode がここにvideoを挿入する -->
-    <div id="qr-reader"></div>
-
-    <!-- スキャン枠オーバーレイ -->
-    <div class="scan-frame-overlay">
-      <div class="scan-frame">
-        <div class="c3"></div>
-        <div class="c4"></div>
-        <div class="scan-line"></div>
+  <!-- A: 検索ブロック（赤） -->
+  <div class="block-card">
+    <span class="block-title bt-red">🔍 検索</span>
+    <div class="search-block">
+      <div class="scan-col">
+        <button class="big-btn btn-scan" onclick="startScan('ship')">📷<br>スキャン</button>
+      </div>
+      <div class="search-right">
+        <input type="text" class="inp" id="search-input" placeholder="バーコード / 商品NO" inputmode="text">
+        <button class="big-btn btn-search" onclick="searchManual()">🔍 検索</button>
       </div>
     </div>
   </div>
 
-  <div class="scanner-hint">
-    <button class="scanner-cam-btn" id="cam-switch-btn" onclick="switchCamera()" style="display:none">
-      🔄 カメラ切り替え
-    </button>
-    <div>バーコード・QRコードを枠内に合わせてください</div>
-    <div style="margin-top:.4rem;font-size:var(--fs-xs);opacity:.7">
-      自動でスキャンされます（タップ不要）
+  <!-- 空状態 -->
+  <div id="ship-empty">
+    <div class="empty-icon">📦</div>
+    バーコードをスキャンまたは<br>商品NOを入力して検索してください
+  </div>
+
+  <!-- 商品詳細（スキャン後表示） -->
+  <div id="ship-detail" style="display:none">
+
+    <!-- B: 商品情報ブロック（黄） -->
+    <div class="block-card">
+      <span class="block-title bt-yellow">📦 商品情報</span>
+      <div class="product-layout">
+        <!-- 左列：画像（拡大） -->
+        <div class="product-img-col">
+          <img id="ship-img" class="product-img" src="" alt="商品画像"
+               onerror="this.style.display='none';document.getElementById('ship-no-img').style.display='flex'">
+          <div id="ship-no-img" class="no-img" style="display:none">🖼️<span>画像なし</span></div>
+        </div>
+        <!-- 右列：縦一直線 -->
+        <div class="product-info-col">
+          <div class="info-row"><span class="info-lbl">BC</span><span class="info-val" id="ship-barcode">-</span></div>
+          <div class="info-row"><span class="info-lbl">商品NO</span><span class="info-val" id="ship-no">-</span></div>
+          <div class="info-row"><span class="info-lbl">保管BC</span><span class="info-val" id="ship-bc-storage">-</span></div>
+          <div class="info-row"><span class="info-lbl">商品名</span><span class="info-val" id="ship-name">-</span></div>
+          <div class="info-row"><span class="info-lbl">発送手段</span><span class="info-val" id="ship-method">-</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- C: 発送処理ブロック（青） -->
+    <div class="block-card">
+      <span class="block-title bt-blue">🚚 発送処理</span>
+      <!-- ステータス行（1行） -->
+      <div class="c-row">
+        <span class="c-lbl">ステータス</span>
+        <div class="c-val">
+          <!-- 現在のステータス（横幅2倍・表示のみ） -->
+          <div class="cur-status-btn" id="ship-cur-status">－</div>
+        </div>
+      </div>
+      <!-- 変更チップ（販売済を除く6個） -->
+      <div class="chip-grp" id="ship-status-chips"></div>
+      <div class="divider"></div>
+      <!-- 販売済日（1行） -->
+      <div class="edit-row">
+        <span class="edit-lbl">📅 販売済日</span>
+        <input type="date" class="edit-inp" id="ship-sold-date">
+      </div>
+      <!-- 販売金額（1行・¥付き） -->
+      <div class="edit-row">
+        <span class="edit-lbl">💴 販売金額</span>
+        <div class="price-wrap">
+          <span class="price-prefix">¥</span>
+          <input type="text" inputmode="numeric" class="price-inp" id="ship-sell-price" placeholder="0">
+        </div>
+      </div>
+    </div>
+
+    <!-- D: 詳細情報ブロック（オレンジ） -->
+    <div class="block-card">
+      <span class="block-title bt-orange">📋 詳細情報</span>
+      <div class="detail-grid">
+        <!-- ⑫ 最上段：状態（表示のみ） -->
+        <span class="d-lbl">状態</span>    <span class="d-val" id="ship-condition">-</span>
+        <span class="d-lbl">メーカー</span><span class="d-val" id="ship-maker">-</span>
+        <span class="d-lbl">カラー</span>  <span class="d-val" id="ship-color">-</span>
+        <span class="d-lbl">サイズ</span>  <span class="d-val" id="ship-size">-</span>
+        <span class="d-lbl">備考</span>    <span class="d-val" id="ship-note">-</span>
+        <span class="d-lbl">購入金額</span><span class="d-val" id="ship-buy-price">-</span>
+        <!-- ⑬ 最下段：購入日 -->
+        <span class="d-lbl">購入日</span>  <span class="d-val" id="ship-buy-date">-</span>
+      </div>
+    </div>
+
+    <!-- 保存・クリアボタン -->
+    <div class="btn-row" style="margin-bottom:1rem">
+      <button class="big-btn btn-save"  onclick="saveShipping()">💾 保存</button>
+      <button class="big-btn btn-clear" onclick="clearShip()">🗑 クリア</button>
     </div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════
-     TAB1: 発送作業
-══════════════════════════════════ -->
-<div class="screen active" id="screen-ship">
-
-  <!-- タイトル -->
-  <div class="page-title">🚚 発送作業</div>
-
-  <!-- GAS URL未設定警告 -->
-  <div class="gas-url-banner" id="gas-url-banner" style="display:none">
-    ⚠️ <strong>GAS WebアプリURLを設定してください</strong>
-  </div>
-
-  <!-- ══ ① スキャン＋手入力エリア（3列） ══ -->
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;margin-bottom:.6rem;">
-    <button class="big-btn btn-scan"
-            style="margin-bottom:0;grid-row:1/3;font-size:1.3rem;min-height:7rem;"
-            onclick="startScanner('ship')">
-      📷<br>スキャン
-    </button>
-    <input type="text"
-           inputmode="text"
-           autocomplete="off"
-           autocorrect="off"
-           autocapitalize="characters"
-           spellcheck="false"
-           id="ship-manual-input"
-           class="inp"
-           style="grid-column:2/4;font-size:1.3rem;"
-           placeholder="バーコード / 商品NO"
-           oninput="this.value=this.value.replace(/[^A-Za-z0-9\-]/g,'').toUpperCase()"
-           onkeydown="if(event.key==='Enter'){searchManual('ship')}">
-    <button class="big-btn btn-save"
-            style="grid-column:2/4;margin-bottom:0;height:3.2rem;font-size:1.3rem;"
-            onclick="searchManual('ship')">🔍 検索</button>
-  </div>
-
-  <!-- 未スキャン時 -->
-  <div id="ship-empty">
-    <div class="empty-icon">📦</div>
-    バーコードをスキャンまたは<br>手入力で検索してください
-  </div>
-
-  <!-- ══ 商品詳細 ══ -->
-  <div id="ship-detail" style="display:none">
-
-    <!-- ② 画像エリア＋右側情報（表形式） -->
-    <div class="card" style="padding:0;overflow:hidden;margin-bottom:.6rem;">
-      <table style="width:100%;border-collapse:collapse;">
-        <tr>
-          <!-- 左：画像（rowspan=3） -->
-          <td rowspan="3"
-              style="width:9rem;min-width:9rem;padding:.6rem;vertical-align:middle;
-                     border-right:.1rem solid #e0e0e0;">
-            <img id="ship-img"
-                 style="width:8rem;height:8rem;object-fit:contain;border-radius:.6rem;background:#f5f5f5;display:block;"
-                 src="" alt="商品画像">
-            <div id="ship-no-img"
-                 style="display:none;width:8rem;height:8rem;background:#eceff1;border-radius:.6rem;
-                        align-items:center;justify-content:center;
-                        color:#90a4ae;font-size:1.1rem;text-align:center;line-height:1.4;">
-              🖼️<br>画像なし
-            </div>
-          </td>
-          <!-- バーコード ＋ 値 -->
-          <td style="padding:.5rem .6rem .3rem;border-bottom:.1rem solid #e0e0e0;width:5rem;">
-            <div class="row-label">バーコード</div>
-          </td>
-          <td style="padding:.5rem .6rem .3rem;border-bottom:.1rem solid #e0e0e0;
-                     font-size:1.5rem;font-weight:800;color:var(--text-dark);">
-            <div id="ship-barcode">-</div>
-          </td>
-        </tr>
-        <tr>
-          <!-- 商品NO ＋ 値 -->
-          <td style="padding:.3rem .6rem;border-bottom:.1rem solid #e0e0e0;">
-            <div class="row-label">商品NO</div>
-          </td>
-          <td style="padding:.3rem .6rem;border-bottom:.1rem solid #e0e0e0;
-                     font-size:1.5rem;font-weight:800;color:var(--text-dark);">
-            <div id="ship-no">-</div>
-          </td>
-        </tr>
-        <tr>
-          <!-- 保管バーコード ＋ 値（2行） -->
-          <td style="padding:.3rem .6rem .5rem;">
-            <div class="row-label">保管BC</div>
-          </td>
-          <td style="padding:.3rem .6rem .5rem;
-                     font-size:1.2rem;font-weight:700;color:var(--text-dark);
-                     word-break:break-all;line-height:1.45;">
-            <div id="ship-bc-storage">-</div>
-          </td>
-        </tr>
-      </table>
-    </div>
-
-    <!-- ③ 商品名・発送手段 -->
-    <div class="card" style="padding:0;overflow:hidden;margin-bottom:.6rem;">
-      <table style="width:100%;border-collapse:collapse;">
-        <tr>
-          <td style="padding:.6rem;width:6rem;border-right:.1rem solid #e0e0e0;border-bottom:.1rem solid #e0e0e0;vertical-align:middle;">
-            <div class="row-label">商品名</div>
-          </td>
-          <td style="padding:.6rem;border-bottom:.1rem solid #e0e0e0;
-                     font-size:1.3rem;font-weight:700;color:var(--text-dark);line-height:1.4;">
-            <div id="ship-name">-</div>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:.6rem;border-right:.1rem solid #e0e0e0;vertical-align:middle;">
-            <div class="row-label">発送手段</div>
-          </td>
-          <td style="padding:.6rem;font-size:1.4rem;font-weight:700;color:var(--text-dark);">
-            <div id="ship-method">-</div>
-          </td>
-        </tr>
-      </table>
-    </div>
-
-    <!-- ④ 発送処理（ステータス変更） -->
-    <div class="card" style="padding:0;overflow:hidden;margin-bottom:.6rem;">
-      <!-- セクションタイトル -->
-      <div style="background:var(--blue-mid);color:#fff;text-align:center;
-                  padding:.5rem;font-size:1.3rem;font-weight:800;">
-        発送処理
-      </div>
-      <table style="width:100%;border-collapse:collapse;">
-        <tr>
-          <td style="padding:.6rem;width:6rem;border-right:.1rem solid #e0e0e0;border-bottom:.1rem solid #e0e0e0;vertical-align:middle;">
-            <div class="row-label">ステータス</div>
-          </td>
-          <td style="padding:.6rem;border-bottom:.1rem solid #e0e0e0;">
-            <span class="status-badge" id="ship-status-badge">-</span>
-          </td>
-        </tr>
-        <!-- ステータス変更チップ（3列グリッド） -->
-        <tr>
-          <td colspan="2" style="padding:.6rem;">
-            <div id="ship-status-chips" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem;"></div>
-          </td>
-        </tr>
-      </table>
-    </div>
-
-    <!-- ⑤ 販売済日・販売金額 -->
-    <div class="card" style="padding:0;overflow:hidden;margin-bottom:.6rem;">
-      <table style="width:100%;border-collapse:collapse;">
-        <tr>
-          <td style="padding:.6rem;width:6rem;border-right:.1rem solid #e0e0e0;border-bottom:.1rem solid #e0e0e0;vertical-align:middle;">
-            <div class="row-label">📅 販売済日</div>
-          </td>
-          <td style="padding:.4rem .6rem;border-bottom:.1rem solid #e0e0e0;">
-            <input type="date" class="inp" id="ship-sold-date"
-                   style="height:3.8rem;">
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:.6rem;border-right:.1rem solid #e0e0e0;vertical-align:middle;">
-            <div class="row-label">💴 販売金額</div>
-          </td>
-          <td style="padding:.4rem .6rem;">
-            <input type="text" inputmode="numeric" class="inp"
-                   id="ship-sell-price" placeholder="例：¥1500"
-                   style="height:3.8rem;">
-          </td>
-        </tr>
-      </table>
-    </div>
-
-    <!-- ⑥ 詳細情報 -->
-    <div class="card" style="padding:0;overflow:hidden;margin-bottom:.6rem;">
-      <div style="background:#546e7a;color:#fff;text-align:center;
-                  padding:.5rem;font-size:1.3rem;font-weight:800;">
-        詳細情報
-      </div>
-      <table style="width:100%;border-collapse:collapse;">
-        <tr>
-          <td style="padding:.5rem .6rem;width:6rem;border-right:.1rem solid #e0e0e0;border-bottom:.1rem solid #e0e0e0;vertical-align:middle;">
-            <div class="row-label">メーカー</div>
-          </td>
-          <td style="padding:.5rem .6rem;border-bottom:.1rem solid #e0e0e0;
-                     font-size:1.3rem;font-weight:600;color:var(--text-dark);">
-            <div id="ship-maker">-</div>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:.5rem .6rem;border-right:.1rem solid #e0e0e0;border-bottom:.1rem solid #e0e0e0;vertical-align:middle;">
-            <div class="row-label">カラー</div>
-          </td>
-          <td style="padding:.5rem .6rem;border-bottom:.1rem solid #e0e0e0;
-                     font-size:1.3rem;font-weight:600;color:var(--text-dark);">
-            <div id="ship-color">-</div>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:.5rem .6rem;border-right:.1rem solid #e0e0e0;border-bottom:.1rem solid #e0e0e0;vertical-align:middle;">
-            <div class="row-label">サイズ・数量</div>
-          </td>
-          <td style="padding:.5rem .6rem;border-bottom:.1rem solid #e0e0e0;
-                     font-size:1.3rem;font-weight:600;color:var(--text-dark);">
-            <div id="ship-size">-</div>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:.5rem .6rem;border-right:.1rem solid #e0e0e0;vertical-align:middle;">
-            <div class="row-label">購入金額</div>
-          </td>
-          <td style="padding:.5rem .6rem;
-                     font-size:1.3rem;font-weight:600;color:var(--text-dark);">
-            <div id="ship-buy-price">-</div>
-          </td>
-        </tr>
-      </table>
-    </div>
-
-    <!-- ⑦ 保存・クリアボタン -->
-    <div class="btn-row">
-      <button class="big-btn btn-save" onclick="saveShipping()">💾 保存</button>
-      <button class="big-btn btn-clear" onclick="clearShip()">🗑 クリア</button>
-    </div>
-
-  </div><!-- /ship-detail -->
-</div><!-- /screen-ship -->
-
-<!-- ══════════════════════════════════
+<!-- ════════════════════════════════
      TAB2: 一括編集
-══════════════════════════════════ -->
+════════════════════════════════ -->
 <div class="screen" id="screen-bulk">
   <div class="page-title">📝 一括編集</div>
-
-  <!-- スキャン＋手入力エリア（一括編集） -->
-  <div style="display:flex;gap:.6rem;margin-bottom:.8rem;align-items:stretch;">
-    <button class="big-btn btn-scan" style="flex:1;margin-bottom:0;" onclick="startScanner('bulk')">
-      📷 スキャンして追加
-    </button>
-    <div style="display:flex;flex-direction:column;gap:.4rem;flex:1;">
-      <input type="text" inputmode="none"
-             id="bulk-manual-input"
-             class="inp"
-             style="height:2.8rem;font-size:1.3rem;letter-spacing:.05em;text-transform:uppercase;"
-             placeholder="バーコード / 商品NO"
-             oninput="this.value=this.value.replace(/[^A-Za-z0-9\-]/g,'')"
-             onkeydown="if(event.key==='Enter'){searchManual('bulk')}">
-      <button class="big-btn btn-save"
-              style="margin-bottom:0;height:2.8rem;font-size:1.3rem;flex:none;"
-              onclick="searchManual('bulk')">🔍 追加</button>
-    </div>
-  </div>
-
-  <!-- スキャン済みリスト -->
+  <button class="big-btn btn-scan" style="margin-bottom:.8rem" onclick="startScan('bulk')">📷 バーコードをスキャンして追加</button>
   <div class="bulk-count" id="bulk-count">0件 スキャン済み</div>
-  <div class="bulk-list" id="bulk-list"></div>
-
-  <!-- 一括編集フォーム（1件以上の時に表示） -->
+  <div id="bulk-list"></div>
   <div id="bulk-form" style="display:none">
     <div class="bulk-form-section">
       <div class="bulk-form-title">● 一括で変更する項目を入力</div>
-      <div style="font-size:var(--fs-xs);color:rgba(255,255,255,0.6);margin-bottom:.8rem">※空欄の項目は変更されません</div>
-
-      <!-- ステータス -->
+      <div style="font-size:var(--fs-xs);color:rgba(255,255,255,.6);margin-bottom:.7rem">※空欄の項目は変更されません</div>
       <div class="form-row">
         <div class="form-label">ステータス</div>
         <div class="chip-grp" id="bulk-status-chips"></div>
       </div>
-
-      <!-- 発送手段 -->
       <div class="form-row">
         <div class="form-label">発送手段</div>
-        <button class="sel-btn" id="bulk-ship-method-btn" onclick="openPopup('bulk-ship-method')">
-          <span id="bulk-ship-method-val">選択してください</span><span>▼</span>
-        </button>
+        <button class="sel-btn" onclick="openPopup('bulk-ship-method')"><span id="bulk-ship-method-val">選択してください</span><span>▼</span></button>
       </div>
-
-      <!-- 販売済日 -->
       <div class="form-row">
-        <div class="form-label">📅 販売済日（発送日）</div>
+        <div class="form-label">📅 販売済日</div>
         <input type="date" class="inp" id="bulk-sold-date">
       </div>
-
-      <!-- 販売金額 -->
       <div class="form-row">
         <div class="form-label">💴 販売金額</div>
-        <input type="text" inputmode="numeric" class="inp" id="bulk-sell-price" placeholder="例：1500">
+        <div class="price-wrap" style="height:var(--h-inp)"><span class="price-prefix">¥</span><input type="text" inputmode="numeric" class="price-inp" id="bulk-sell-price" placeholder="0"></div>
       </div>
-
-      <!-- 購入日 -->
       <div class="form-row">
         <div class="form-label">📅 購入日</div>
         <input type="date" class="inp" id="bulk-buy-date">
       </div>
-
-      <!-- 購入金額 -->
       <div class="form-row">
         <div class="form-label">💴 購入金額</div>
-        <input type="text" inputmode="numeric" class="inp" id="bulk-buy-price" placeholder="例：500">
+        <div class="price-wrap" style="height:var(--h-inp)"><span class="price-prefix">¥</span><input type="text" inputmode="numeric" class="price-inp" id="bulk-buy-price" placeholder="0"></div>
       </div>
-
-      <!-- 店名 -->
       <div class="form-row">
         <div class="form-label">🏪 店名</div>
-        <button class="sel-btn" id="bulk-shop-btn" onclick="openPopup('bulk-shop')">
-          <span id="bulk-shop-val">選択してください</span><span>▼</span>
-        </button>
+        <button class="sel-btn" onclick="openPopup('bulk-shop')"><span id="bulk-shop-val">選択してください</span><span>▼</span></button>
       </div>
-
-      <!-- 商品名 -->
       <div class="form-row">
         <div class="form-label">📦 商品名</div>
-        <button class="sel-btn" id="bulk-name-btn" onclick="openPopup('bulk-name')">
-          <span id="bulk-name-val">選択してください</span><span>▼</span>
-        </button>
+        <button class="sel-btn" onclick="openPopup('bulk-name')"><span id="bulk-name-val">選択してください</span><span>▼</span></button>
       </div>
     </div>
-
-    <!-- 一括保存・クリアボタン -->
-    <div class="btn-row">
-      <button class="big-btn btn-save" onclick="saveBulk()">💾 一括保存</button>
+    <div class="btn-row" style="margin-bottom:1rem">
+      <button class="big-btn btn-save"   onclick="saveBulk()">💾 一括保存</button>
       <button class="big-btn btn-danger" onclick="clearBulk()">🗑 全クリア</button>
     </div>
   </div>
-
-</div><!-- /screen-bulk -->
+</div>
 
 <!-- タブバー -->
 <div class="tab-bar">
-  <button class="tab-btn active" id="tab-ship" onclick="changeTab('ship')">
-    <span class="tab-icon">🚚</span>
-    <span class="tab-label">発送作業</span>
-  </button>
-  <button class="tab-btn" id="tab-bulk" onclick="changeTab('bulk')">
-    <span class="tab-icon">📝</span>
-    <span class="tab-label">一括編集</span>
-  </button>
+  <button class="tab-btn active" id="tab-ship" onclick="changeTab('ship')"><span class="tab-icon">🚚</span><span class="tab-label">発送作業</span></button>
+  <button class="tab-btn"        id="tab-bulk" onclick="changeTab('bulk')"><span class="tab-icon">📝</span><span class="tab-label">一括編集</span></button>
 </div>
 
 <script>
-// ══════════════════════════════════════════════
-//  ★★★ GAS WebアプリURL を設定してください ★★★
-//  GASエディタ → デプロイ → 新しいデプロイ → ウェブアプリ
-//  → アクセスできるユーザー「全員」でデプロイ → URLをコピー
-// ══════════════════════════════════════════════
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwszCwfSETnzE2RvEMb2qXCPPuqgD8Ybu6efEw6t714REwHQVJtEE-Qu7WeWZx-oGZ12w/exec';
+const GAS_URL='https://script.google.com/macros/s/AKfycbzaeu3ATr2_vxLbi4IX2YP1SCSITgTxc-IOY4hdIVRLAFJNWrLaOkvT_un9kvCWiE1sbg/exec';
+const IS_GAS=(typeof google!=='undefined')&&google.script&&google.script.run;
+// 発送処理チップ：販売済を除く6個
+const SHIP_STATUSES=['在庫','検品済','保品','No有','出タイ待','出品'];
+// 一括編集チップ：全7個
+const ALL_STATUSES=['在庫','検品済','保品','No有','出タイ待','出品','販売済'];
 
-// ══════════════════════════════════════════════
-//  定数・状態管理
-// ══════════════════════════════════════════════
-const STATUSES = ['在庫','検品済','保品','No有','出タイ待','出品','販売済'];
+let masters={statuses:ALL_STATUSES,shippings:[],shops:[],makers:[],nameList:[]};
+let shipItem=null,shipStatus='';
+let bulkItems=[],bulkStatus='',bulkShipMethod='',bulkShop='',bulkNameId='',bulkNameLabel='';
+let scanMode='',codeReader=null,popupTarget='';
 
-let masters        = { statuses:STATUSES, shippings:[], shops:[], makers:[], nameList:[] };
-let shipItem       = null;
-let shipStatus     = '';
-let bulkItems      = [];
-let bulkStatus     = '';
-let bulkShipMethod = '';
-let bulkShop       = '';
-let bulkNameId     = '';
-let bulkNameLabel  = '';
-let popupTarget    = '';
-
-// スキャナー状態
-let html5QrCode    = null;
-let scanMode       = 'ship'; // 'ship' | 'bulk'
-let availableCams  = [];
-let currentCamIdx  = 0;
-let scanCooldown   = false; // 連続スキャン防止
-
-// ══════════════════════════════════════════════
-//  GAS 呼び出し（fetch + JSONP両対応）
-//  GitHub Pages → GAS は CORS の制限があるため
-//  doGet で JSON を返す URL パラメータ方式を使用
-// ══════════════════════════════════════════════
-function gasCall(fn, payload, ok, ng) {
-  const isPlaceholder = GAS_URL.includes('★');
-  if (isPlaceholder) {
-    // URL未設定時はモックで動作確認
-    console.warn('GAS_URLが未設定です。モックモードで動作します。');
-    setTimeout(() => {
-      if (fn === 'getMasters') {
-        ok({ ok:true, statuses:STATUSES, shippings:['ネコポス','ゆうパケット','定形外'], shops:['01-自宅在庫','02-タックルベリー'], makers:[], nameList:[] });
-      } else if (fn === 'getProductByBarcode') {
-        ok({ found:true, item:{ 識別ID:'TEST001', バーコード:payload.barcode, 保管バーコード:'', 商品NO:'TEST-001', 商品名:'テスト商品（モック）', メーカー:'ダイワ', 備考:'', サイズ数量:'', カラー:'レッド', ステータス:'在庫', 発送手段:'ネコポス', 購入日:'2026/01/01', 購入金額:500, 販売金額:1500, imgUrl:'', rowIndex:2 }});
-      } else {
-        ok({ ok:true, updated: (payload.items||[]).length });
-      }
-    }, 400);
-    return;
-  }
-
-  // GAS WebアプリにGETリクエスト（no-cors問題を回避するためJSONPを使用）
-  const callbackName = '_gasCallback_' + Date.now();
-  const params = new URLSearchParams({
-    fn      : fn,
-    payload : JSON.stringify(payload),
-    callback: callbackName,
-  });
-
-  window[callbackName] = function(data) {
-    delete window[callbackName];
-    document.getElementById('jsonp-' + callbackName)?.remove();
-    if (ok) ok(data);
-  };
-
-  const script = document.createElement('script');
-  script.id  = 'jsonp-' + callbackName;
-  script.src = GAS_URL + '?' + params.toString();
-  script.onerror = function() {
-    delete window[callbackName];
-    script.remove();
-    if (ng) ng(new Error('通信エラー'));
-    else showToast('⚠️ 通信エラー','err');
-  };
-
-  // タイムアウト（15秒）
-  const timeout = setTimeout(() => {
-    if (window[callbackName]) {
-      delete window[callbackName];
-      script.remove();
-      if (ng) ng(new Error('タイムアウト'));
-      else showToast('⚠️ タイムアウト','err');
-    }
-  }, 15000);
-
-  script.onload = () => clearTimeout(timeout);
-  document.head.appendChild(script);
+// ── GAS通信 ──
+function gasCall(fn,payload,ok,ng){
+  if(IS_GAS){google.script.run.withSuccessHandler(r=>{if(ok)ok(r);}).withFailureHandler(e=>{if(ng)ng(e);else showToast('⚠️ 通信エラー','err');})[fn](payload);return;}
+  const url=GAS_URL+'?fn='+encodeURIComponent(fn)+'&payload='+encodeURIComponent(JSON.stringify(payload));
+  fetch(url).then(r=>r.json()).then(r=>{if(ok)ok(r);}).catch(e=>{if(ng)ng(e);else showToast('⚠️ 通信エラー','err');});
 }
-
-// ══════════════════════════════════════════════
-//  UI ヘルパー
-// ══════════════════════════════════════════════
-function showLoad(msg) {
-  document.getElementById('loading-msg').textContent = msg || '処理中...';
-  document.getElementById('loading-ov').classList.add('show');
-}
-function hideLoad() {
-  document.getElementById('loading-ov').classList.remove('show');
-}
-
-let toastTimer = null;
-function showToast(msg, type) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'toast' + (type === 'err' ? ' err' : '') + ' show';
-  if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.classList.remove('show'); }, 2600);
-}
-
-function showDialog(title, msg, okCb, cancelCb) {
-  document.getElementById('dialog-title').textContent = title;
-  document.getElementById('dialog-msg').textContent   = msg;
-  const cancelBtn = document.getElementById('dialog-cancel');
-  cancelBtn.style.display = cancelCb ? '' : 'none';
-  cancelBtn.onclick = () => { closeDialog(); if(cancelCb) cancelCb(); };
-  document.getElementById('dialog-ok').onclick = () => { closeDialog(); if(okCb) okCb(); };
+// ── UI共通 ──
+function showLoad(m){document.getElementById('loading-msg').textContent=m||'処理中...';document.getElementById('loading-ov').classList.add('show');}
+function hideLoad(){document.getElementById('loading-ov').classList.remove('show');}
+let _tt=null;
+function showToast(msg,type){const el=document.getElementById('toast');el.textContent=msg;el.className='toast'+(type==='err'?' err':'')+' show';if(_tt)clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),2600);}
+function showDialog(title,msg,okCb,cancelCb){
+  document.getElementById('dialog-title').textContent=title;
+  document.getElementById('dialog-msg').textContent=msg;
+  const cb=document.getElementById('dialog-cancel');cb.style.display=cancelCb?'':'none';
+  cb.onclick=()=>{closeDialog();if(cancelCb)cancelCb();};
+  document.getElementById('dialog-ok').onclick=()=>{closeDialog();if(okCb)okCb();};
   document.getElementById('dialog-ov').classList.add('open');
 }
-function closeDialog() {
-  document.getElementById('dialog-ov').classList.remove('open');
+function closeDialog(){document.getElementById('dialog-ov').classList.remove('open');}
+function setText(id,val){const el=document.getElementById(id);if(el)el.textContent=val||'-';}
+function changeTab(n){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('screen-'+n).classList.add('active');
+  document.getElementById('tab-'+n).classList.add('active');
 }
-
-function setText(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = val || '-';
-}
-
-function changeTab(name) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('screen-' + name).classList.add('active');
-  document.getElementById('tab-' + name).classList.add('active');
-}
-
-// ══════════════════════════════════════════════
-//  ポップアップ（リスト選択）
-// ══════════════════════════════════════════════
-function openPopup(target) {
-  popupTarget = target;
-  const listEl = document.getElementById('popup-list');
-  listEl.innerHTML = '';
-  let items = [], title = '選択', currentVal = '';
-
-  if (target === 'bulk-ship-method') {
-    title = '発送手段'; items = masters.shippings; currentVal = bulkShipMethod;
-  } else if (target === 'bulk-shop') {
-    title = '店名'; items = masters.shops; currentVal = bulkShop;
-  } else if (target === 'bulk-name') {
-    title = '商品名'; items = masters.nameList.map(n => n.name); currentVal = bulkNameLabel;
-  }
-
-  document.getElementById('popup-title').textContent = title;
-  items.forEach(item => {
-    const div = document.createElement('div');
-    div.className = 'popup-item' + (item === currentVal ? ' selected' : '');
-    div.textContent = item;
-    div.onclick = () => selectPopupItem(item);
-    listEl.appendChild(div);
+// ── ポップアップ ──
+function openPopup(target){
+  popupTarget=target;const listEl=document.getElementById('popup-list');listEl.innerHTML='';
+  let items=[],title='選択',current='';
+  if(target==='bulk-ship-method'){title='発送手段';items=masters.shippings;current=bulkShipMethod;}
+  else if(target==='bulk-shop'){title='店名';items=masters.shops;current=bulkShop;}
+  else if(target==='bulk-name'){title='商品名';items=masters.nameList.map(n=>n.name);current=bulkNameLabel;}
+  document.getElementById('popup-title').textContent=title;
+  items.forEach(item=>{
+    const d=document.createElement('div');
+    d.className='popup-item'+(item===current?' selected':'');
+    d.textContent=item;d.onclick=()=>selectPopupItem(item);
+    listEl.appendChild(d);
   });
   document.getElementById('popup-ov').classList.add('open');
 }
-
-function selectPopupItem(val) {
-  if (popupTarget === 'bulk-ship-method') {
-    bulkShipMethod = val;
-    document.getElementById('bulk-ship-method-val').textContent = val;
-  } else if (popupTarget === 'bulk-shop') {
-    bulkShop = val;
-    document.getElementById('bulk-shop-val').textContent = val;
-  } else if (popupTarget === 'bulk-name') {
-    bulkNameLabel = val;
-    const found = masters.nameList.find(n => n.name === val);
-    bulkNameId = found ? found.id : '';
-    document.getElementById('bulk-name-val').textContent = val;
-  }
+function selectPopupItem(val){
+  if(popupTarget==='bulk-ship-method'){bulkShipMethod=val;document.getElementById('bulk-ship-method-val').textContent=val;}
+  else if(popupTarget==='bulk-shop'){bulkShop=val;document.getElementById('bulk-shop-val').textContent=val;}
+  else if(popupTarget==='bulk-name'){bulkNameLabel=val;const f=masters.nameList.find(n=>n.name===val);bulkNameId=f?f.id:'';document.getElementById('bulk-name-val').textContent=val;}
   closePopup();
 }
-
-function closePopup() {
-  document.getElementById('popup-ov').classList.remove('open');
-}
-
-// ══════════════════════════════════════════════
-//  ステータスチップ生成
-// ══════════════════════════════════════════════
-function buildStatusChips(containerId, selectedRef, onSelect) {
-  const grp = document.getElementById(containerId);
-  grp.innerHTML = '';
-  STATUSES.forEach(s => {
-    const btn = document.createElement('button');
-    btn.className = 'chip' + (selectedRef() === s ? ' sel' : '');
-    btn.textContent = s;
-    btn.onclick = () => {
-      onSelect(s);
-      grp.querySelectorAll('.chip').forEach(c => c.classList.remove('sel'));
-      btn.classList.add('sel');
-    };
-    grp.appendChild(btn);
+function closePopup(){document.getElementById('popup-ov').classList.remove('open');}
+// ── ステータスチップ ──
+function buildStatusChips(id,statusList,getV,setV){
+  const grp=document.getElementById(id);grp.innerHTML='';
+  statusList.forEach(s=>{
+    const b=document.createElement('button');
+    b.className='chip'+(getV()===s?' sel':'');b.textContent=s;
+    b.onclick=()=>{setV(s);grp.querySelectorAll('.chip').forEach(c=>c.classList.remove('sel'));b.classList.add('sel');};
+    grp.appendChild(b);
   });
 }
-
-// ══════════════════════════════════════════════
-//  html5-qrcode スキャナー制御
-//
-//  ★ 設計方針 ★
-//  - カメラ許可は初回1回だけ。2回目以降は許可ポップアップなし。
-//  - facingMode:'environment' で後カメラを直接指定（前カメラを完全排除）
-//  - 後カメラが複数ある場合のみ切り替えボタンを表示
-//  - スキャン成功時はカメラを「停止せず非表示」にしてストリーム保持
-// ══════════════════════════════════════════════
-
-// 後カメラのみのリスト（前カメラは除外）
-let backCams = [];
-
-async function startScanner(mode) {
-  scanMode = mode;
-  scanCooldown = false;
-  document.getElementById('scanner-ov').classList.add('open');
-
-  // ── 初回のみ: カメラ一覧取得 & 後カメラだけ抽出 ──
-  if (backCams.length === 0) {
-    try {
-      const allCams = await Html5Qrcode.getCameras();
-      console.log('全カメラ一覧:', allCams.map((c,i)=>`[${i}] ${c.label}`));
-
-      // 前カメラ（front/user/selfie/インカメ/facing front）を厳格に除外
-      backCams = allCams.filter(c => {
-        const lbl = (c.label || '').toLowerCase();
-        // 明確に前カメラと分かるラベルを除外
-        if (/front|selfie|facetime|インカメ|前面|facing front/i.test(lbl)) return false;
-        // "user" facing も除外（MediaDevices の facingMode=user = 前カメラ）
-        if (/\buser\b/.test(lbl)) return false;
-        return true;
-      });
-
-      // フィルタ後に0件になった場合は全部使う（フォールバック）
-      if (backCams.length === 0) backCams = allCams;
-
-      console.log('後カメラ一覧:', backCams.map((c,i)=>`[${i}] ${c.label}`));
-
-      // ── デフォルトカメラ選択 ──
-      // Galaxy は後カメラが複数ある場合、リスト末尾がマクロ/至近距離レンズになる傾向
-      // → 末尾を初期選択にする
-      currentCamIdx = backCams.length - 1;
-      console.log('デフォルト選択:', backCams[currentCamIdx]?.label);
-    } catch(e) {
-      showToast('⚠️ カメラへのアクセスが拒否されました','err');
-      closeScanner();
-      return;
-    }
-  }
-
-  // 後カメラが複数ある場合のみ切り替えボタン表示
-  document.getElementById('cam-switch-btn').style.display =
-    backCams.length > 1 ? 'inline-block' : 'none';
-
-  await launchCamera();
+// ── ZXing スキャン ──
+function startScan(mode){
+  scanMode=mode;document.getElementById('scan-ov').classList.add('open');
+  try{
+    const hints=new Map();
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[
+      ZXing.BarcodeFormat.CODE_39,ZXing.BarcodeFormat.CODE_128,
+      ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8
+    ]);
+    hints.set(ZXing.DecodeHintType.TRY_HARDER,true);
+    codeReader=new ZXing.BrowserMultiFormatReader(hints);
+    codeReader.decodeFromVideoDevice(null,'scan-video',(result,err)=>{
+      if(result){stopScan();fetchProduct(result.getText(),scanMode);}
+    });
+  }catch(e){stopScan();showToast('⚠️ カメラの起動に失敗しました','err');}
 }
-
-async function launchCamera() {
-  if (html5QrCode) {
-    try { await html5QrCode.stop(); } catch(e) {}
-    html5QrCode = null;
-  }
-
-  html5QrCode = new Html5Qrcode('qr-reader', { verbose: false });
-
-  const camId = backCams[currentCamIdx]?.id;
-  if (!camId) return;
-
-  const config = {
-    fps: 15,
-    aspectRatio: 1.0,
-    formatsToSupport: [
-      Html5QrcodeSupportedFormats.QR_CODE,
-      Html5QrcodeSupportedFormats.EAN_13,
-      Html5QrcodeSupportedFormats.EAN_8,
-      Html5QrcodeSupportedFormats.CODE_128,
-      Html5QrcodeSupportedFormats.CODE_39,
-      Html5QrcodeSupportedFormats.UPC_A,
-      Html5QrcodeSupportedFormats.UPC_E,
-      Html5QrcodeSupportedFormats.ITF,
-      Html5QrcodeSupportedFormats.DATA_MATRIX,
-    ],
-    experimentalFeatures: {
-      useBarCodeDetectorIfSupported: true,
-    },
-  };
-
-  try {
-    await html5QrCode.start(camId, config, onScanSuccess, onScanFailure);
-  } catch(e) {
-    console.error('Camera start error:', e);
-    showToast('⚠️ カメラの起動に失敗しました','err');
-    closeScanner();
-  }
+function stopScan(){if(codeReader){try{codeReader.reset();}catch(e){}codeReader=null;}document.getElementById('scan-ov').classList.remove('open');}
+// ── 手動検索 ──
+function searchManual(){
+  const val=document.getElementById('search-input').value.trim();
+  if(!val){showToast('⚠️ バーコードまたは商品NOを入力してください','err');return;}
+  fetchProduct(val,'ship');
 }
-
-function onScanSuccess(decodedText) {
-  if (scanCooldown) return;
-  scanCooldown = true;
-
-  if (navigator.vibrate) navigator.vibrate(80);
-
-  // カメラを完全停止してからGAS通信（Galaxyの「今回のみ」権限対策）
-  closeScanner().then(() => {
-    setTimeout(() => {
-      fetchProduct(decodedText.trim(), scanMode);
-      scanCooldown = false;
-    }, 200);
-  });
-}
-
-function onScanFailure(error) {
-  // 毎フレーム呼ばれるため何もしない
-}
-
-async function closeScanner() {
-  document.getElementById('scanner-ov').classList.remove('open');
-  // カメラを毎回停止（Samsung Galaxy「今回のみ」権限に対応）
-  if (html5QrCode) {
-    try {
-      await html5QrCode.stop();
-    } catch(e) {
-      console.warn('camera stop error:', e);
-    }
-    html5QrCode = null;
-  }
-  // html5-qrcodeが生成したDOM要素をクリア（再起動のため）
-  const reader = document.getElementById('qr-reader');
-  if (reader) reader.innerHTML = '';
-}
-
-async function switchCamera() {
-  if (backCams.length <= 1) return;
-  currentCamIdx = (currentCamIdx + 1) % backCams.length;
-  // 切り替え時のみ再起動
-  if (html5QrCode) {
-    try { await html5QrCode.stop(); } catch(e) {}
-    html5QrCode = null;
-  }
-  const reader = document.getElementById('qr-reader');
-  reader.innerHTML = '';
-  await launchCamera();
-}
-
-// ══════════════════════════════════════════════
-//  商品データ取得
-// ══════════════════════════════════════════════
-// ══════════════════════════════════════════════
-//  手入力検索
-//  バーコード・商品NOどちらでも検索可能
-//  半角英数のみ入力可（oninputでフィルタ済み）
-// ══════════════════════════════════════════════
-function searchManual(mode) {
-  const inputId = mode === 'ship' ? 'ship-manual-input' : 'bulk-manual-input';
-  const val = document.getElementById(inputId).value.trim().toUpperCase();
-  if (!val) {
-    showToast('⚠️ バーコードまたは商品NOを入力してください', 'err');
-    return;
-  }
-  // 入力欄をクリア
-  document.getElementById(inputId).value = '';
-  fetchProduct(val, mode);
-}
-
-function fetchProduct(barcode, mode) {
+// ── 商品検索 ──
+function fetchProduct(barcode,mode){
   showLoad('商品照合中...');
-  gasCall('getProductByBarcode', { barcode: barcode, keyword: barcode }, res => {
+  gasCall('getProductByBarcode',{barcode:barcode},res=>{
     hideLoad();
-    if (res && res.found) {
-      if (mode === 'ship') {
-        showShipDetail(res.item);
-      } else if (mode === 'bulk') {
-        addBulkItem(res.item);
-      }
-    } else if (res && res.error) {
-      showToast('⚠️ ' + res.error, 'err');
-    } else {
-      showToast('⚠️ 未登録のバーコードです: ' + barcode, 'err');
-    }
-  }, () => { hideLoad(); showToast('⚠️ 通信エラー','err'); });
+    if(res&&res.found){if(mode==='ship')showShipDetail(res.item);else addBulkItem(res.item);}
+    else showToast('⚠️ 未登録のバーコードです','err');
+  },()=>{hideLoad();showToast('⚠️ 通信エラー','err');});
 }
-
-// ══════════════════════════════════════════════
-//  TAB1: 発送作業
-// ══════════════════════════════════════════════
-function showShipDetail(item) {
-  shipItem   = item;
-  shipStatus = item.ステータス || '';
-
-  document.getElementById('ship-empty').style.display  = 'none';
-  document.getElementById('ship-detail').style.display = 'block';
-
-  // 画像表示
-  // Google Drive: uc?export=view は CORS でブロックされるため
-  // thumbnail URL → lh3.googleusercontent → 画像なし の順でフォールバック
-  const img   = document.getElementById('ship-img');
-  const noImg = document.getElementById('ship-no-img');
-
-  function showNoImg() {
-    img.style.display = 'none';
-    noImg.style.display = 'flex';
-  }
-
-  if (item.imgUrl) {
-    const driveIdMatch = item.imgUrl.match(/[?&]id=([^&]+)/);
-    if (driveIdMatch) {
-      const fileId = driveIdMatch[1];
-      // ① まず thumbnail URL で試みる（CORS制限なし）
-      const url1 = 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w400';
-      // ② 失敗したら lh3 形式で再試行
-      const url2 = 'https://lh3.googleusercontent.com/d/' + fileId + '=w400';
-
-      img.onerror = null;
-      img.src = url1;
-      img.style.display = 'block';
-      noImg.style.display = 'none';
-
-      let retried = false;
-      img.onerror = () => {
-        if (!retried) {
-          retried = true;
-          console.warn('thumbnail失敗、lh3で再試行:', fileId);
-          img.src = url2;
-        } else {
-          console.warn('lh3も失敗、画像なし表示:', fileId);
-          showNoImg();
-        }
-      };
-    } else {
-      showNoImg();
-    }
-  } else {
-    showNoImg();
-  }
-
-  setText('ship-barcode',    item.バーコード);
-  setText('ship-bc-storage', item.保管バーコード);
-  setText('ship-no',         item.商品NO);
-  setText('ship-name',       item.商品名);
-  setText('ship-maker',      item.メーカー);
-  setText('ship-note',       item.備考);
-  setText('ship-size',       item.サイズ数量);
-  setText('ship-color',      item.カラー);
-  setText('ship-method',     item.発送手段);
-  setText('ship-buy-date',   item.購入日);
-  setText('ship-buy-price',  item.購入金額 ? '¥' + Number(item.購入金額).toLocaleString() : '-');
-
-  const badge = document.getElementById('ship-status-badge');
-  badge.textContent = item.ステータス || '-';
-  badge.className = 'status-badge st-' + (item.ステータス || '');
-
-  // 今日の日付をデフォルトセット
-  const today = new Date();
-  const ymd = today.getFullYear() + '-'
-    + String(today.getMonth()+1).padStart(2,'0') + '-'
-    + String(today.getDate()).padStart(2,'0');
-  document.getElementById('ship-sold-date').value = ymd;
-  document.getElementById('ship-sell-price').value = item.販売金額 ? String(item.販売金額) : '';
-
-  buildStatusChips('ship-status-chips', () => shipStatus, s => { shipStatus = s; });
-
-  // 画面トップへスクロール
-  document.getElementById('screen-ship').scrollTop = 0;
+// ── TAB1 発送作業 ──
+function showShipDetail(item){
+  shipItem=item;shipStatus=item.ステータス||'';
+  document.getElementById('ship-empty').style.display='none';
+  document.getElementById('ship-detail').style.display='block';
+  // 画像
+  const img=document.getElementById('ship-img'),noImg=document.getElementById('ship-no-img');
+  if(item.imgUrl){img.src=item.imgUrl;img.style.display='block';noImg.style.display='none';}
+  else{img.style.display='none';noImg.style.display='flex';}
+  // B: 商品情報
+  setText('ship-barcode',item.バーコード);
+  setText('ship-no',item.商品NO);
+  setText('ship-bc-storage',item.保管バーコード);
+  setText('ship-name',item.商品名);
+  setText('ship-method',item.発送手段);
+  // C: 発送処理 - 現在のステータス表示
+  document.getElementById('ship-cur-status').textContent=item.ステータス||'－';
+  // D: 詳細情報
+  setText('ship-condition',item.状態);
+  setText('ship-maker',item.メーカー);
+  setText('ship-color',item.カラー);
+  setText('ship-size',item.サイズ数量);
+  setText('ship-note',item.備考);
+  setText('ship-buy-price',item.購入金額?'¥'+Number(item.購入金額).toLocaleString():'-');
+  setText('ship-buy-date',item.購入日);
+  // 販売済日デフォルト：今日
+  const t=new Date();
+  document.getElementById('ship-sold-date').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+  // 販売金額
+  document.getElementById('ship-sell-price').value=item.販売金額?String(item.販売金額):'';
+  // チップ（販売済を除く6個）
+  buildStatusChips('ship-status-chips',SHIP_STATUSES,()=>shipStatus,s=>{shipStatus=s;});
 }
-
-function saveShipping() {
-  if (!shipItem) { showToast('⚠️ 商品をスキャンしてください','err'); return; }
-
-  const soldDate  = document.getElementById('ship-sold-date').value;
-  const sellPrice = document.getElementById('ship-sell-price').value.replace(/[^0-9]/g,'');
-
-  if (!shipStatus)  { showToast('⚠️ ステータスを選択してください','err'); return; }
-  if (!soldDate)    { showToast('⚠️ 販売済日を入力してください','err'); return; }
-
+function saveShipping(){
+  if(!shipItem){showToast('⚠️ 商品をスキャンしてください','err');return;}
+  if(!shipStatus){showToast('⚠️ ステータスを選択してください','err');return;}
+  const soldDate=document.getElementById('ship-sold-date').value;
+  if(!soldDate){showToast('⚠️ 販売済日を入力してください','err');return;}
+  const sellPrice=document.getElementById('ship-sell-price').value.replace(/[^0-9]/g,'');
   showDialog('発送処理を保存',
-    '商品NO: ' + shipItem.商品NO +
-    '\nステータス: ' + shipStatus +
-    '\n発送日: ' + soldDate.replace(/-/g,'/') +
-    '\n\n保存しますか？',
-    () => {
+    '商品NO: '+shipItem.商品NO+'\nステータス: '+shipStatus+'\n発送日: '+soldDate.replace(/-/g,'/')+'\n\n保存しますか？',
+    ()=>{
       showLoad('保存中...');
-      gasCall('updateShipping', {
-        rowIndex  : shipItem.rowIndex,
-        ステータス : shipStatus,
-        販売済日   : soldDate.replace(/-/g,'/'),
-        販売金額   : sellPrice ? Number(sellPrice) : undefined,
-      }, res => {
-        hideLoad();
-        if (res && res.ok) {
-          showToast('✅ 保存しました');
-          clearShip();
-        } else {
-          showToast('⚠️ 保存に失敗しました','err');
-        }
-      }, () => { hideLoad(); showToast('⚠️ 通信エラー','err'); });
-    }, null
-  );
+      gasCall('updateShipping',{rowIndex:shipItem.rowIndex,ステータス:shipStatus,販売済日:soldDate.replace(/-/g,'/'),販売金額:sellPrice?Number(sellPrice):undefined},
+        res=>{hideLoad();if(res&&res.ok){showToast('✅ 保存しました');clearShip();}else showToast('⚠️ 保存に失敗しました','err');},
+        ()=>{hideLoad();showToast('⚠️ 通信エラー','err');});
+    },null);
 }
-
-function clearShip() {
-  shipItem   = null;
-  shipStatus = '';
-  document.getElementById('ship-empty').style.display  = 'block';
-  document.getElementById('ship-detail').style.display = 'none';
+function clearShip(){
+  shipItem=null;shipStatus='';
+  document.getElementById('ship-empty').style.display='block';
+  document.getElementById('ship-detail').style.display='none';
+  document.getElementById('search-input').value='';
 }
-
-// ══════════════════════════════════════════════
-//  TAB2: 一括編集
-// ══════════════════════════════════════════════
-function addBulkItem(item) {
-  if (bulkItems.find(b => b.識別ID === item.識別ID)) {
-    showToast('⚠️ すでに追加済みです','err');
-    return;
-  }
-  bulkItems.push(item);
-  renderBulkList();
-  showToast('✅ ' + (item.商品名 || item.バーコード) + ' を追加');
+// ── TAB2 一括編集 ──
+function addBulkItem(item){
+  if(bulkItems.find(b=>b.識別ID===item.識別ID)){showToast('⚠️ すでに追加済みです','err');return;}
+  bulkItems.push(item);renderBulkList();showToast('✅ '+(item.商品名||item.バーコード)+' を追加');
 }
-
-function renderBulkList() {
-  const listEl  = document.getElementById('bulk-list');
-  const countEl = document.getElementById('bulk-count');
-  const formEl  = document.getElementById('bulk-form');
-
-  countEl.textContent = bulkItems.length + '件 スキャン済み';
-  formEl.style.display = bulkItems.length > 0 ? 'block' : 'none';
-
-  listEl.innerHTML = '';
-  bulkItems.forEach((item, idx) => {
-    const div = document.createElement('div');
-    div.className = 'bulk-item';
-    div.innerHTML = `
-      <div class="bulk-item-no">${idx+1}</div>
-      <div class="bulk-item-info">
-        <div class="bulk-item-name">${escHtml(item.商品名 || '（商品名不明）')}</div>
-        <div class="bulk-item-sub">BC: ${escHtml(item.バーコード)} ／ ${escHtml(item.ステータス || '-')}</div>
-      </div>
-      <button class="bulk-item-del" onclick="removeBulkItem(${idx})">✕</button>
-    `;
-    listEl.appendChild(div);
+function renderBulkList(){
+  const listEl=document.getElementById('bulk-list');
+  document.getElementById('bulk-count').textContent=bulkItems.length+'件 スキャン済み';
+  document.getElementById('bulk-form').style.display=bulkItems.length>0?'block':'none';
+  listEl.innerHTML='';
+  bulkItems.forEach((item,idx)=>{
+    const d=document.createElement('div');d.className='bulk-item';
+    d.innerHTML=`<div class="bulk-item-no">${idx+1}</div><div class="bulk-item-info"><div class="bulk-item-name">${item.商品名||'（商品名不明）'}</div><div class="bulk-item-sub">BC: ${item.バーコード} ／ ${item.ステータス||'-'}</div></div><button class="bulk-item-del" onclick="removeBulkItem(${idx})">✕</button>`;
+    listEl.appendChild(d);
   });
-
-  buildStatusChips('bulk-status-chips', () => bulkStatus, s => { bulkStatus = s; });
+  buildStatusChips('bulk-status-chips',ALL_STATUSES,()=>bulkStatus,s=>{bulkStatus=s;});
 }
-
-function escHtml(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-function removeBulkItem(idx) {
-  bulkItems.splice(idx, 1);
-  renderBulkList();
-}
-
-function saveBulk() {
-  if (bulkItems.length === 0) { showToast('⚠️ 商品をスキャンしてください','err'); return; }
-
-  const soldDate  = document.getElementById('bulk-sold-date').value;
-  const buyDate   = document.getElementById('bulk-buy-date').value;
-  const sellPrice = document.getElementById('bulk-sell-price').value.replace(/[^0-9]/g,'');
-  const buyPrice  = document.getElementById('bulk-buy-price').value.replace(/[^0-9]/g,'');
-
-  showDialog('一括保存の確認',
-    bulkItems.length + '件をまとめて保存します\nよろしいですか？',
-    () => {
+function removeBulkItem(idx){bulkItems.splice(idx,1);renderBulkList();}
+function saveBulk(){
+  if(bulkItems.length===0){showToast('⚠️ 商品をスキャンしてください','err');return;}
+  const soldDate=document.getElementById('bulk-sold-date').value,buyDate=document.getElementById('bulk-buy-date').value;
+  const sellPrice=document.getElementById('bulk-sell-price').value.replace(/[^0-9]/g,''),buyPrice=document.getElementById('bulk-buy-price').value.replace(/[^0-9]/g,'');
+  showDialog('一括保存の確認',bulkItems.length+'件をまとめて保存します\nよろしいですか？',
+    ()=>{
       showLoad('一括保存中...');
-      const items = bulkItems.map(item => {
-        const p = { rowIndex: item.rowIndex };
-        if (bulkStatus)    p.ステータス = bulkStatus;
-        if (bulkShipMethod)p.発送手段   = bulkShipMethod;
-        if (soldDate)      p.販売済日   = soldDate.replace(/-/g,'/');
-        if (buyDate)       p.購入日     = buyDate.replace(/-/g,'/');
-        if (sellPrice)     p.販売金額   = Number(sellPrice);
-        if (buyPrice)      p.購入金額   = Number(buyPrice);
-        if (bulkShop)      p.店名       = bulkShop;
-        if (bulkNameId)    p.商品名ID   = bulkNameId;
+      const items=bulkItems.map(item=>{
+        const p={rowIndex:item.rowIndex};
+        if(bulkStatus)p.ステータス=bulkStatus;if(bulkShipMethod)p.発送手段=bulkShipMethod;
+        if(soldDate)p.販売済日=soldDate.replace(/-/g,'/');if(buyDate)p.購入日=buyDate.replace(/-/g,'/');
+        if(sellPrice)p.販売金額=Number(sellPrice);if(buyPrice)p.購入金額=Number(buyPrice);
+        if(bulkShop)p.店名=bulkShop;if(bulkNameId)p.商品名ID=bulkNameId;
         return p;
       });
-
-      gasCall('bulkUpdate', { items: items }, res => {
-        hideLoad();
-        if (res && res.ok) {
-          showToast('✅ ' + res.updated + '件 保存しました');
-          clearBulk();
-        } else {
-          showToast('⚠️ 保存に失敗しました','err');
-        }
-      }, () => { hideLoad(); showToast('⚠️ 通信エラー','err'); });
-    }, null
-  );
+      gasCall('bulkUpdate',{items:items},
+        res=>{hideLoad();if(res&&res.ok){showToast('✅ '+res.updated+'件 保存しました');clearBulk();}else showToast('⚠️ 保存に失敗しました','err');},
+        ()=>{hideLoad();showToast('⚠️ 通信エラー','err');});
+    },null);
 }
-
-function clearBulk() {
-  bulkItems      = [];
-  bulkStatus     = '';
-  bulkShipMethod = '';
-  bulkShop       = '';
-  bulkNameId     = '';
-  bulkNameLabel  = '';
-  document.getElementById('bulk-sold-date').value  = '';
-  document.getElementById('bulk-buy-date').value   = '';
-  document.getElementById('bulk-sell-price').value = '';
-  document.getElementById('bulk-buy-price').value  = '';
-  document.getElementById('bulk-ship-method-val').textContent = '選択してください';
-  document.getElementById('bulk-shop-val').textContent        = '選択してください';
-  document.getElementById('bulk-name-val').textContent        = '選択してください';
+function clearBulk(){
+  bulkItems=[];bulkStatus='';bulkShipMethod='';bulkShop='';bulkNameId='';bulkNameLabel='';
+  ['bulk-sold-date','bulk-buy-date','bulk-sell-price','bulk-buy-price'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('bulk-ship-method-val').textContent='選択してください';
+  document.getElementById('bulk-shop-val').textContent='選択してください';
+  document.getElementById('bulk-name-val').textContent='選択してください';
   renderBulkList();
 }
-
-// ══════════════════════════════════════════════
-//  初期化
-// ══════════════════════════════════════════════
-function initApp() {
-  // GAS URL未設定の場合はバナーを表示
-  if (GAS_URL.includes('★')) {
-    document.getElementById('gas-url-banner').style.display = 'block';
-    console.warn('モックモードで動作中。GAS_URLを設定してください。');
-  }
-
-  loadMasters();
-}
-
-function loadMasters() {
+// ── 初期化 ──
+function loadMasters(){
   showLoad('データ読み込み中...');
-  gasCall('getMasters', {}, res => {
-    hideLoad();
-    if (res && res.ok) {
-      masters = res;
-    }
-    buildStatusChips('ship-status-chips', () => shipStatus, s => { shipStatus = s; });
-    buildStatusChips('bulk-status-chips', () => bulkStatus, s => { bulkStatus = s; });
-  }, () => {
-    hideLoad();
-    showToast('⚠️ マスタ読み込みエラー','err');
-  });
+  gasCall('getMasters',{},res=>{
+    hideLoad();if(res&&res.ok)masters=res;
+    buildStatusChips('ship-status-chips',SHIP_STATUSES,()=>shipStatus,s=>{shipStatus=s;});
+    buildStatusChips('bulk-status-chips',ALL_STATUSES,()=>bulkStatus,s=>{bulkStatus=s;});
+  },()=>{hideLoad();showToast('⚠️ マスタ読み込みエラー','err');});
 }
-
-initApp();
+loadMasters();
 </script>
 </body>
 </html>
