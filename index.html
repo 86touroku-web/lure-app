@@ -121,15 +121,15 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 .c-val{flex:1;}
 /* 現在のステータス表示ボタン（横幅2倍・表示のみ） */
 .cur-status-btn{
-  width:100%;height:3.8rem;border-radius:var(--r);border:none;
+  width:100%;height:4rem;border-radius:var(--r);border:none;
   font-size:var(--fs-md);font-weight:800;cursor:default;
   background:linear-gradient(90deg,#1565c0,#1976d2);color:#fff;
   display:flex;align-items:center;justify-content:center;
   box-shadow:0 2px 6px rgba(0,0,0,.2);letter-spacing:.05em;
 }
 /* ステータスチップ（販売済を除く6個） */
-.chip-grp{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.5rem;}
-.chip{padding:.35rem .9rem;border-radius:2rem;border:.15rem solid #cfd8dc;cursor:pointer;font-size:var(--fs-sm);font-weight:700;background:#f0f4f8;color:var(--text-mid);white-space:nowrap;}
+.chip-grp{display:flex;flex-wrap:nowrap;gap:.3rem;margin-bottom:.5rem;}
+.chip{flex:1;padding:.35rem .2rem;border-radius:2rem;border:.15rem solid #cfd8dc;cursor:pointer;font-size:var(--fs-sm);font-weight:700;background:#f0f4f8;color:var(--text-mid);white-space:nowrap;text-align:center;}
 .chip.sel{background:var(--blue-mid);color:#fff;border-color:var(--blue-mid);}
 .divider{height:.1rem;background:#e0e0e0;margin:.5rem 0;}
 /* 販売済日・販売金額：1行表示 */
@@ -141,10 +141,13 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 .price-wrap{flex:1;display:flex;align-items:center;background:#f0f4f8;border:.15rem solid #cfd8dc;border-radius:var(--r);height:4rem;overflow:hidden;}
 .price-prefix{padding:0 .2rem 0 .8rem;font-size:var(--fs-md);font-weight:700;color:var(--text-mid);}
 .price-inp{flex:1;border:none;background:transparent;padding:0 .8rem 0 0;color:var(--text-dark);font-size:var(--fs-md);font-weight:600;height:100%;outline:none;}
+.price-inp::placeholder{color:rgba(55,71,79,.45);}
+.edit-inp::placeholder{color:rgba(55,71,79,.45);}
+.inp::placeholder{color:rgba(55,71,79,.45);}
 /* ── D: 詳細情報ブロック ── */
 .detail-grid{display:grid;grid-template-columns:5.5rem 1fr;gap:.45rem .5rem;align-items:baseline;}
-.d-lbl{font-size:var(--fs-xs);font-weight:700;color:var(--blue-mid);white-space:nowrap;}
-.d-val{font-size:var(--fs-sm);font-weight:600;color:var(--text-dark);word-break:break-all;}
+.d-lbl{font-size:var(--fs-sm);font-weight:700;color:var(--blue-mid);white-space:nowrap;}
+.d-val{font-size:var(--fs-md);font-weight:600;color:var(--text-dark);word-break:break-all;}
 /* ── 空状態 ── */
 #ship-empty{text-align:center;padding:2.5rem 1rem;color:rgba(255,255,255,.7);font-size:var(--fs-md);line-height:1.8;}
 #ship-empty .empty-icon{font-size:4rem;margin-bottom:1rem;}
@@ -236,7 +239,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
         <button class="big-btn btn-scan" onclick="startScan('ship')">📷<br>スキャン</button>
       </div>
       <div class="search-right">
-        <input type="text" class="inp" id="search-input" placeholder="バーコード / 商品NO" inputmode="text">
+        <input type="text" class="inp" id="search-input" placeholder="バーコード / 商品NO" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" ___skip___ oninput="this.value=this.value.replace(/[^A-Za-z0-9\-]/g,'').toUpperCase()" onkeydown="if(event.key==='Enter'){searchManual()}">
         <button class="big-btn btn-search" onclick="searchManual()">🔍 検索</button>
       </div>
     </div>
@@ -342,6 +345,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
                inputmode="text" autocomplete="off" autocorrect="off"
                autocapitalize="characters" spellcheck="false"
                placeholder="バーコード / 商品NO"
+               style="text-align:center;"
                oninput="this.value=this.value.replace(/[^A-Za-z0-9\-]/g,'').toUpperCase()"
                onkeydown="if(event.key==='Enter'){searchBulkManual()}">
         <button class="big-btn btn-search" onclick="searchBulkManual()">🔍 追加</button>
@@ -589,9 +593,20 @@ function showShipDetail(item){
   shipItem=item;shipStatus=item.ステータス||'';
   document.getElementById('ship-empty').style.display='none';
   document.getElementById('ship-detail').style.display='block';
-  // 画像（非表示固定）
-  document.getElementById('ship-img').style.display='none';
-  document.getElementById('ship-no-img').style.display='none';
+  // 画像（Google Drive thumbnail URLで表示）
+  const _img=document.getElementById('ship-img'),_noImg=document.getElementById('ship-no-img');
+  if(item.imgUrl){
+    const _m=item.imgUrl.match(/[?&]id=([^&]+)/);
+    if(_m){
+      let _retried=false;
+      _img.onerror=()=>{
+        if(!_retried){_retried=true;_img.src='https://lh3.googleusercontent.com/d/'+_m[1]+'=w400';}
+        else{_img.style.display='none';_noImg.style.display='flex';}
+      };
+      _img.src='https://drive.google.com/thumbnail?id='+_m[1]+'&sz=w400';
+      _img.style.display='block';_noImg.style.display='none';
+    }else{_img.style.display='none';_noImg.style.display='flex';}
+  }else{_img.style.display='none';_noImg.style.display='flex';}
   // B: 商品情報
   setText('ship-barcode',item.バーコード);
   setText('ship-no',item.商品NO);
