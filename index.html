@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>ルアー在庫管理</title>
-<script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;}
 input,select,textarea,button{font-family:inherit;-webkit-appearance:none;appearance:none;}
@@ -40,15 +40,30 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 .dialog-cancel{flex:1;border-radius:var(--r);cursor:pointer;font-weight:700;background:#fff;border:.2rem solid var(--red);color:var(--red);font-size:var(--fs-md);height:var(--h-btn);}
 .dialog-ok{flex:1;border-radius:var(--r);cursor:pointer;font-weight:700;background:var(--blue-mid);border:none;color:#fff;font-size:var(--fs-md);height:var(--h-btn);}
 /* ── SCAN ── */
-.scan-ov{display:none;position:fixed;inset:0;background:#000;z-index:800;flex-direction:column;align-items:center;justify-content:center;}
+/* ── スキャナーモーダル（html5-qrcode） ── */
+.scan-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:800;flex-direction:column;align-items:center;}
 .scan-ov.open{display:flex;}
-.scan-wrap{position:relative;width:100%;max-width:48rem;}
-#scan-video{width:100%;display:block;}
-.scan-guide{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:70%;height:12rem;border:.3rem solid var(--yellow);border-radius:.8rem;box-shadow:0 0 0 999px rgba(0,0,0,.45);}
-.scan-line{position:absolute;top:0;left:0;right:0;height:.3rem;background:var(--yellow);animation:scanLine 2s ease-in-out infinite;}
-@keyframes scanLine{0%{top:0;}50%{top:calc(100% - .3rem);}100%{top:0;}}
-.scan-label{color:#fff;font-size:var(--fs-md);font-weight:700;margin-top:2rem;text-align:center;}
-.scan-cancel{margin-top:2rem;padding:1rem 3rem;background:rgba(255,255,255,.15);border:.2rem solid rgba(255,255,255,.5);border-radius:2rem;color:#fff;font-size:var(--fs-md);font-weight:700;cursor:pointer;}
+.scan-header{width:100%;padding:1rem 1.4rem;display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.5);flex-shrink:0;}
+.scan-title{color:#fff;font-size:var(--fs-lg);font-weight:800;}
+.scan-close-btn{width:3.8rem;height:3.8rem;border-radius:50%;background:rgba(255,255,255,.15);border:none;cursor:pointer;font-size:1.8rem;color:#fff;display:flex;align-items:center;justify-content:center;}
+.scan-viewport{flex:1;width:100%;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+#qr-reader{width:100%!important;max-width:100%!important;}
+#qr-reader video{width:100%!important;height:auto!important;object-fit:cover;}
+#qr-reader img{display:none!important;}
+#qr-reader__dashboard{display:none!important;}
+#qr-reader__status_span{display:none!important;}
+#qr-reader__header_message{display:none!important;}
+.scan-frame-ov{position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center;}
+.scan-frame{position:relative;width:min(72vw,26rem);height:min(72vw,26rem);}
+.scan-frame::before,.scan-frame::after,.scan-frame .c3,.scan-frame .c4{content:'';position:absolute;width:2.8rem;height:2.8rem;border-color:#4cca80;border-style:solid;}
+.scan-frame::before{top:0;left:0;border-width:.4rem 0 0 .4rem;border-radius:.4rem 0 0 0;}
+.scan-frame::after{top:0;right:0;border-width:.4rem .4rem 0 0;border-radius:0 .4rem 0 0;}
+.scan-frame .c3{bottom:0;left:0;border-width:0 0 .4rem .4rem;border-radius:0 0 0 .4rem;}
+.scan-frame .c4{bottom:0;right:0;border-width:0 .4rem .4rem 0;border-radius:0 0 .4rem 0;}
+.scan-line{position:absolute;left:2%;right:2%;height:.2rem;background:linear-gradient(90deg,transparent,#4cca80,#00bcd4,#4cca80,transparent);box-shadow:0 0 8px #4cca80;animation:scanLine 2s ease-in-out infinite;}
+@keyframes scanLine{0%{top:4%;}50%{top:92%;}100%{top:4%;}}
+.scan-hint{flex-shrink:0;padding:.8rem 1.4rem 1.6rem;text-align:center;color:rgba(255,255,255,.75);font-size:var(--fs-sm);line-height:1.6;}
+.scan-cam-btn{margin-bottom:.6rem;padding:.5rem 1.4rem;border-radius:2rem;background:rgba(255,255,255,.15);border:.1rem solid rgba(255,255,255,.3);color:#fff;font-size:var(--fs-sm);font-weight:700;cursor:pointer;}
 /* ── TAB ── */
 .tab-bar{position:absolute;bottom:0;left:0;right:0;height:var(--tab-h);background:rgba(13,79,140,.97);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -2px 12px rgba(0,0,0,.25);}
 .tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3rem;cursor:pointer;border:none;background:none;padding:0;color:rgba(255,255,255,.5);border-top:.3rem solid transparent;}
@@ -175,14 +190,26 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
     </div>
   </div>
 </div>
-<!-- カメラスキャン -->
+<!-- スキャナーモーダル（html5-qrcode） -->
 <div class="scan-ov" id="scan-ov">
-  <div class="scan-wrap">
-    <video id="scan-video" playsinline autoplay muted></video>
-    <div class="scan-guide"><div class="scan-line"></div></div>
+  <div class="scan-header">
+    <div class="scan-title">📷 バーコードスキャン</div>
+    <button class="scan-close-btn" onclick="stopScan()">✕</button>
   </div>
-  <div class="scan-label">バーコードをガイド枠に合わせてください</div>
-  <button class="scan-cancel" onclick="stopScan()">キャンセル</button>
+  <div class="scan-viewport">
+    <div id="qr-reader"></div>
+    <div class="scan-frame-ov">
+      <div class="scan-frame">
+        <div class="c3"></div><div class="c4"></div>
+        <div class="scan-line"></div>
+      </div>
+    </div>
+  </div>
+  <div class="scan-hint">
+    <button class="scan-cam-btn" id="cam-switch-btn" onclick="switchCamera()" style="display:none">🔄 カメラ切り替え</button>
+    <div>バーコード・QRコードを枠内に合わせてください</div>
+    <div style="font-size:var(--fs-xs);opacity:.7;margin-top:.3rem">自動スキャン（タップ不要）</div>
+  </div>
 </div>
 <!-- ポップアップ -->
 <div class="popup-ov" id="popup-ov">
@@ -303,7 +330,24 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 ════════════════════════════════ -->
 <div class="screen" id="screen-bulk">
   <div class="page-title">📝 一括編集</div>
-  <button class="big-btn btn-scan" style="margin-bottom:.8rem" onclick="startScan('bulk')">📷 バーコードをスキャンして追加</button>
+  <!-- A: 検索ブロック（発送作業と同じ構成） -->
+  <div class="block-card" style="margin-bottom:.8rem;">
+    <span class="block-title bt-red">🔍 検索</span>
+    <div class="search-block">
+      <div class="scan-col">
+        <button class="big-btn btn-scan" onclick="startScan('bulk')">📷<br>スキャン</button>
+      </div>
+      <div class="search-right">
+        <input type="text" class="inp" id="bulk-search-input"
+               inputmode="text" autocomplete="off" autocorrect="off"
+               autocapitalize="characters" spellcheck="false"
+               placeholder="バーコード / 商品NO"
+               oninput="this.value=this.value.replace(/[^A-Za-z0-9\-]/g,'').toUpperCase()"
+               onkeydown="if(event.key==='Enter'){searchBulkManual()}">
+        <button class="big-btn btn-search" onclick="searchBulkManual()">🔍 追加</button>
+      </div>
+    </div>
+  </div>
   <div class="bulk-count" id="bulk-count">0件 スキャン済み</div>
   <div id="bulk-list"></div>
   <div id="bulk-form" style="display:none">
@@ -367,7 +411,7 @@ const ALL_STATUSES=['在庫','検品済','保品','No有','出タイ待','出品
 let masters={statuses:ALL_STATUSES,shippings:[],shops:[],makers:[],nameList:[]};
 let shipItem=null,shipStatus='';
 let bulkItems=[],bulkStatus='',bulkShipMethod='',bulkShop='',bulkNameId='',bulkNameLabel='';
-let scanMode='',codeReader=null,popupTarget='';
+let scanMode='',popupTarget='';
 
 // ── GAS通信 ──
 function gasCall(fn,payload,ok,ng){
@@ -429,28 +473,107 @@ function buildStatusChips(id,statusList,getV,setV){
     grp.appendChild(b);
   });
 }
-// ── ZXing スキャン ──
-function startScan(mode){
-  scanMode=mode;document.getElementById('scan-ov').classList.add('open');
-  try{
-    const hints=new Map();
-    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[
-      ZXing.BarcodeFormat.CODE_39,ZXing.BarcodeFormat.CODE_128,
-      ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8
-    ]);
-    hints.set(ZXing.DecodeHintType.TRY_HARDER,true);
-    codeReader=new ZXing.BrowserMultiFormatReader(hints);
-    codeReader.decodeFromVideoDevice(null,'scan-video',(result,err)=>{
-      if(result){stopScan();fetchProduct(result.getText(),scanMode);}
-    });
-  }catch(e){stopScan();showToast('⚠️ カメラの起動に失敗しました','err');}
+// ── html5-qrcode スキャン ──
+let html5QrCode=null,availableCams=[],currentCamIdx=0,scanCooldown=false;
+
+async function startScan(mode){
+  scanMode=mode;
+  scanCooldown=false;
+  document.getElementById('scan-ov').classList.add('open');
+  // カメラ一覧取得（初回のみ）
+  if(availableCams.length===0){
+    try{
+      availableCams=await Html5Qrcode.getCameras();
+      console.log('カメラ一覧:',availableCams.map((c,i)=>`[${i}] ${c.label}`));
+    }catch(e){
+      showToast('⚠️ カメラへのアクセスが拒否されました','err');
+      document.getElementById('scan-ov').classList.remove('open');
+      return;
+    }
+  }
+  document.getElementById('cam-switch-btn').style.display=availableCams.length>1?'inline-block':'none';
+  // 初回：後カメラ（マクロ寄り）を選択
+  if(availableCams.length>1 && currentCamIdx===0){
+    let idx=availableCams.findIndex(c=>c.label&&/macro|接写|telephoto/i.test(c.label));
+    if(idx<0){
+      // 後カメラ群の最大インデックス（Galaxy=マクロ寄り）
+      const backIdx=[];
+      availableCams.forEach((c,i)=>{if(!c.label||/back|rear|environment|後/i.test(c.label))backIdx.push(i);});
+      if(backIdx.length>0)idx=backIdx[backIdx.length-1];
+    }
+    if(idx<0)idx=availableCams.length-1;
+    currentCamIdx=idx;
+    console.log('選択カメラ:',availableCams[currentCamIdx]?.label);
+  }
+  await launchCamera();
 }
-function stopScan(){if(codeReader){try{codeReader.reset();}catch(e){}codeReader=null;}document.getElementById('scan-ov').classList.remove('open');}
+
+async function launchCamera(){
+  if(html5QrCode){try{await html5QrCode.stop();}catch(e){}html5QrCode=null;}
+  document.getElementById('qr-reader').innerHTML='';
+  html5QrCode=new Html5Qrcode('qr-reader',{verbose:false});
+  const camId=availableCams[currentCamIdx]?.id;
+  if(!camId)return;
+  const cfg={
+    fps:15,aspectRatio:1.0,
+    formatsToSupport:[
+      Html5QrcodeSupportedFormats.QR_CODE,
+      Html5QrcodeSupportedFormats.EAN_13,
+      Html5QrcodeSupportedFormats.EAN_8,
+      Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.CODE_39,
+      Html5QrcodeSupportedFormats.UPC_A,
+      Html5QrcodeSupportedFormats.ITF,
+    ],
+    experimentalFeatures:{useBarCodeDetectorIfSupported:true},
+  };
+  try{
+    await html5QrCode.start(camId,cfg,onScanSuccess,()=>{});
+  }catch(e){
+    console.error('Camera start error:',e);
+    showToast('⚠️ カメラの起動に失敗しました','err');
+    stopScan();
+  }
+}
+
+function onScanSuccess(decodedText){
+  if(scanCooldown)return;
+  scanCooldown=true;
+  if(navigator.vibrate)navigator.vibrate(80);
+  stopScan().then(()=>{
+    setTimeout(()=>{
+      fetchProduct(decodedText.trim(),scanMode);
+      scanCooldown=false;
+    },200);
+  });
+}
+
+async function stopScan(){
+  document.getElementById('scan-ov').classList.remove('open');
+  if(html5QrCode){
+    try{await html5QrCode.stop();}catch(e){console.warn('stop err:',e);}
+    html5QrCode=null;
+  }
+  document.getElementById('qr-reader').innerHTML='';
+}
+
+async function switchCamera(){
+  if(availableCams.length<=1)return;
+  currentCamIdx=(currentCamIdx+1)%availableCams.length;
+  await launchCamera();
+}
 // ── 手動検索 ──
 function searchManual(){
-  const val=document.getElementById('search-input').value.trim();
+  const val=document.getElementById('search-input').value.trim().toUpperCase();
   if(!val){showToast('⚠️ バーコードまたは商品NOを入力してください','err');return;}
+  document.getElementById('search-input').value='';
   fetchProduct(val,'ship');
+}
+function searchBulkManual(){
+  const val=document.getElementById('bulk-search-input').value.trim().toUpperCase();
+  if(!val){showToast('⚠️ バーコードまたは商品NOを入力してください','err');return;}
+  document.getElementById('bulk-search-input').value='';
+  fetchProduct(val,'bulk');
 }
 // ── 商品検索 ──
 function fetchProduct(barcode,mode){
@@ -466,10 +589,9 @@ function showShipDetail(item){
   shipItem=item;shipStatus=item.ステータス||'';
   document.getElementById('ship-empty').style.display='none';
   document.getElementById('ship-detail').style.display='block';
-  // 画像
-  const img=document.getElementById('ship-img'),noImg=document.getElementById('ship-no-img');
-  if(item.imgUrl){img.src=item.imgUrl;img.style.display='block';noImg.style.display='none';}
-  else{img.style.display='none';noImg.style.display='flex';}
+  // 画像（非表示固定）
+  document.getElementById('ship-img').style.display='none';
+  document.getElementById('ship-no-img').style.display='none';
   // B: 商品情報
   setText('ship-barcode',item.バーコード);
   setText('ship-no',item.商品NO);
