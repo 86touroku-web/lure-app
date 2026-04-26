@@ -375,7 +375,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
       <div class="form-row">
         <div class="form-label">📦 保管場所バーコード</div>
         <button class="big-btn btn-scan" style="width:100%;margin-bottom:.4rem;" onclick="startScan('bulk-storage')">📷 保管場所をスキャン</button>
-        <div id="bulk-storage-val" style="text-align:center;font-size:var(--fs-sm);font-weight:700;color:#fff;min-height:1.8rem;"></div>
+        <div id="bulk-storage-val" style="min-height:3.6rem;background:rgba(0,0,0,.25);border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:var(--fs-md);font-weight:700;color:#fff;padding:.4rem 1rem;letter-spacing:.05em;"></div>
       </div>
       <div class="form-row">
         <div class="form-label">ステータス</div>
@@ -604,17 +604,20 @@ function searchBulkManual(){
   fetchProduct(val,'bulk');
 }
 // ── 商品検索 ──
-function fetchProduct(barcode,mode){
+function fetchProduct(keyword,mode){
   showLoad('商品照合中...');
-  gasCall('getProductByBarcode',{barcode:barcode},res=>{
+  // barcode・keyword 両方渡す（GAS側はどちらでも検索可能）
+  gasCall('getProductByBarcode',{barcode:keyword,keyword:keyword},res=>{
     hideLoad();
     if(res&&res.found){if(mode==='ship')showShipDetail(res.item);else addBulkItem(res.item);}
-    else showToast('⚠️ 未登録のバーコードです','err');
+    else showToast('⚠️ 未登録のバーコード / 商品NOです','err');
   },()=>{hideLoad();showToast('⚠️ 通信エラー','err');});
 }
 // ── TAB1 発送作業 ──
 function showShipDetail(item){
-  shipItem=item;shipStatus=item.ステータス||'';
+  shipItem=item;
+  // 現在のステータスをチップにハイライト表示（並び順は固定）
+  shipStatus=item.ステータス||'';
   document.getElementById('ship-empty').style.display='none';
   document.getElementById('ship-detail').style.display='block';
   // 画像（Google Drive thumbnail URLで表示）
@@ -665,7 +668,7 @@ function saveShipping(){
   if(!sellPriceRaw||Number(sellPriceRaw)===0){showToast('⚠️ 販売金額を入力してください','err');return;}
   const sellPrice=Number(sellPriceRaw);
   showDialog('発送処理を保存',
-    '商品NO: '+shipItem.商品NO+'\nステータス: '+shipStatus+'\n発送日: '+soldDate.replace(/-/g,'/')+'\n\n保存しますか？',
+    '商品NO: '+shipItem.商品NO+'\n変更前: '+shipItem.ステータス+' → 変更後: '+shipStatus+'\n発送日: '+soldDate.replace(/-/g,'/')+'\n\n保存しますか？',
     ()=>{
       showLoad('保存中...');
       gasCall('updateShipping',{rowIndex:shipItem.rowIndex,ステータス:shipStatus,販売済日:soldDate.replace(/-/g,'/'),販売金額:sellPrice},
@@ -691,7 +694,8 @@ function renderBulkList(){
   listEl.innerHTML='';
   bulkItems.forEach((item,idx)=>{
     const d=document.createElement('div');d.className='bulk-item';
-    d.innerHTML=`<div class="bulk-item-no">${idx+1}</div><div class="bulk-item-info"><div class="bulk-item-name">${item.商品名||'（商品名不明）'}</div><div class="bulk-item-sub">BC: ${item.バーコード} ／ ${item.ステータス||'-'}</div></div><button class="bulk-item-del" onclick="removeBulkItem(${idx})">✕</button>`;
+    const storageDisp=item.保管バーコード?` ／ 📍${item.保管バーコード}`:'';
+    d.innerHTML=`<div class="bulk-item-no">${idx+1}</div><div class="bulk-item-info"><div class="bulk-item-name">${item.商品名||'（商品名不明）'}</div><div class="bulk-item-sub">BC: ${item.バーコード} ／ ${item.ステータス||'-'}${storageDisp}</div></div><button class="bulk-item-del" onclick="removeBulkItem(${idx})">✕</button>`;
     listEl.appendChild(d);
   });
   buildStatusChips('bulk-status-chips',ALL_STATUSES,()=>bulkStatus,s=>{bulkStatus=s;});
