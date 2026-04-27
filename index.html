@@ -432,18 +432,28 @@ const CONDITION_LIST=['未使用','未使用に近い','目立ったキズや汚
 let bulkItems=[],bulkStatus='',bulkShop='',bulkNameId='',bulkNameLabel='',bulkCondition='',bulkStorageBarcode='';
 let scanMode='',popupTarget='';
 
-// ── GAS通信（JSONP方式でCORS回避） ──
+// ── GAS通信（fetch方式・LINE WebView対応） ──
 function gasCall(fn,payload,ok,ng){
-  if(IS_GAS){google.script.run.withSuccessHandler(r=>{if(ok)ok(r);}).withFailureHandler(e=>{if(ng)ng(e);else showToast('⚠️ 通信エラー','err');})[fn](payload);return;}
-  const cbName='_gasCallback_'+Date.now();
-  const script=document.createElement('script');
-  let done=false;
-  const timer=setTimeout(()=>{if(!done){done=true;cleanup();if(ng)ng(new Error('timeout'));else showToast('⚠️ 通信タイムアウト','err');}},15000);
-  function cleanup(){delete window[cbName];if(script.parentNode)script.parentNode.removeChild(script);clearTimeout(timer);}
-  window[cbName]=function(r){if(done)return;done=true;cleanup();if(ok)ok(r);};
-  script.onerror=function(){if(done)return;done=true;cleanup();if(ng)ng(new Error('script error'));else showToast('⚠️ 通信エラー','err');};
-  script.src=GAS_URL+'?fn='+encodeURIComponent(fn)+'&payload='+encodeURIComponent(JSON.stringify(payload))+'&callback='+cbName;
-  document.head.appendChild(script);
+  if(IS_GAS){
+    google.script.run
+      .withSuccessHandler(r=>{if(ok)ok(r);})
+      .withFailureHandler(e=>{if(ng)ng(e);else showToast('⚠️ 通信エラー','err');})[fn](payload);
+    return;
+  }
+  const url=GAS_URL+'?fn='+encodeURIComponent(fn)+'&payload='+encodeURIComponent(JSON.stringify(payload));
+  const ctrl=new AbortController();
+  const timer=setTimeout(()=>{ctrl.abort();if(ng)ng(new Error('timeout'));else showToast('⚠️ 通信タイムアウト','err');},20000);
+  fetch(url,{method:'GET',signal:ctrl.signal})
+    .then(r=>{
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      return r.json();
+    })
+    .then(r=>{clearTimeout(timer);if(ok)ok(r);})
+    .catch(e=>{
+      clearTimeout(timer);
+      if(e.name==='AbortError')return;
+      if(ng)ng(e);else showToast('⚠️ 通信エラー','err');
+    });
 }
 // ── UI共通 ──
 function showLoad(m){document.getElementById('loading-msg').textContent=m||'処理中...';document.getElementById('loading-ov').classList.add('show');}
