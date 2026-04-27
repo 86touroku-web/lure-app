@@ -126,7 +126,9 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 .product-info-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:.4rem;}
 .info-row{display:grid;grid-template-columns:5rem 1fr;align-items:baseline;gap:.3rem;}
 .info-lbl{font-size:var(--fs-xs);font-weight:700;color:var(--hdr-orange);white-space:nowrap;}
-.info-val{font-size:var(--fs-sm);font-weight:700;color:var(--text-dark);line-height:1.3;word-break:break-all;}
+.info-val{font-size:var(--fs-sm);font-weight:700;color:var(--text-dark);line-height:1.3;word-break:break-all;white-space:normal;}
+/* 商品名のみ最大2行 */
+#ship-name{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:visible;white-space:normal;}
 /* ── C: 発送処理ブロック ── */
 /* ステータス行：1行表示 */
 .c-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem;}
@@ -165,11 +167,11 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 #ship-empty{text-align:center;padding:2.5rem 1rem;color:rgba(255,255,255,.7);font-size:var(--fs-md);line-height:1.8;}
 #ship-empty .empty-icon{font-size:4rem;margin-bottom:1rem;}
 /* ── 一括編集 ── */
-.bulk-item{background:var(--card-bg);border-radius:var(--r);padding:.7rem 1rem;margin-bottom:.5rem;display:flex;align-items:flex-start;gap:.8rem;box-shadow:0 1px 4px rgba(0,0,0,.1);}
+.bulk-item{background:var(--card-bg);border-radius:var(--r);padding:.7rem 1rem;margin-bottom:.5rem;display:flex;align-items:flex-start;gap:.8rem;box-shadow:0 1px 4px rgba(0,0,0,.1);min-height:5rem;}
 .bulk-item-no{width:2.4rem;height:2.4rem;border-radius:50%;background:var(--blue-mid);color:#fff;font-size:var(--fs-xs);font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.2rem;}
 .bulk-item-info{flex:1;min-width:0;}
 .bulk-item-name{font-size:var(--fs-sm);font-weight:700;color:var(--text-dark);word-break:break-all;line-height:1.3;}
-.bulk-item-sub{font-size:var(--fs-xs);color:#78909c;margin-top:.3rem;line-height:1.5;word-break:break-all;}
+.bulk-item-sub{font-size:var(--fs-xs);color:#78909c;margin-top:.3rem;line-height:1.6;word-break:break-all;white-space:normal;}
 .bulk-item-del{width:3rem;height:3rem;border-radius:50%;background:var(--red);color:#fff;border:none;cursor:pointer;font-size:1.6rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .bulk-count{text-align:center;font-size:var(--fs-sm);font-weight:700;color:rgba(255,255,255,.8);margin-bottom:.6rem;}
 .bulk-form-section{background:var(--card-bg2);border-radius:1.2rem;padding:1rem;margin-bottom:.8rem;border:.1rem solid rgba(255,255,255,.2);}
@@ -273,9 +275,8 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
       <div class="product-layout">
         <!-- 左列：画像（拡大） -->
         <div class="product-img-col">
-          <img id="ship-img" class="product-img" src="" alt="商品画像"
-               onerror="this.style.display='none';document.getElementById('ship-no-img').style.display='flex'">
-          <div id="ship-no-img" class="no-img" style="display:none">🖼️<span>画像なし</span></div>
+          <img id="ship-img" class="product-img" src="" alt="商品画像" style="display:none">
+          <div id="ship-no-img" class="no-img">🖼️<span>画像なし</span></div>
         </div>
         <!-- 右列：縦一直線 -->
         <div class="product-info-col">
@@ -623,46 +624,77 @@ function fetchProduct(keyword,mode){
 // ── TAB1 発送作業 ──
 function showShipDetail(item){
   shipItem=item;
-  // 現在のステータスをチップにハイライト表示（並び順は固定）
+  // 現在のスプレッドシートのステータスを保持（チップ初期ハイライト用）
+  // ※ 選択用チップ（SHIP_STATUSES）は販売済を含まない6個で変更しない
+  // ※ 現ステータスが販売済の場合はチップに一致するものがないため何もハイライトしない
   shipStatus=item.ステータス||'';
   document.getElementById('ship-empty').style.display='none';
   document.getElementById('ship-detail').style.display='block';
-  // 画像（Google Drive thumbnail URLで表示）
+
+  // ⑤ 画像表示（二重onerror競合を解消・一元管理）
   const _img=document.getElementById('ship-img'),_noImg=document.getElementById('ship-no-img');
+  // 前回のonerrorをリセット
+  _img.onerror=null;
+  _img.src='';
   if(item.imgUrl){
     const _m=item.imgUrl.match(/[?&]id=([^&]+)/);
     if(_m){
+      const _fileId=_m[1];
       let _retried=false;
-      _img.onerror=()=>{
-        if(!_retried){_retried=true;_img.src='https://lh3.googleusercontent.com/d/'+_m[1]+'=w400';}
-        else{_img.style.display='none';_noImg.style.display='flex';}
+      _img.onerror=function(){
+        if(!_retried){
+          _retried=true;
+          // thumbnail失敗時はlh3へフォールバック
+          _img.onerror=function(){
+            _img.style.display='none';
+            _noImg.style.display='flex';
+          };
+          _img.src='https://lh3.googleusercontent.com/d/'+_fileId+'=w400';
+        }
       };
-      _img.src='https://drive.google.com/thumbnail?id='+_m[1]+'&sz=w400';
-      _img.style.display='block';_noImg.style.display='none';
-    }else{_img.style.display='none';_noImg.style.display='flex';}
-  }else{_img.style.display='none';_noImg.style.display='flex';}
+      _img.onload=function(){
+        _img.style.display='block';
+        _noImg.style.display='none';
+      };
+      _noImg.style.display='flex';
+      _img.style.display='none';
+      _img.src='https://drive.google.com/thumbnail?id='+_fileId+'&sz=w400&cachebust='+Date.now();
+    }else{
+      _img.style.display='none';_noImg.style.display='flex';
+    }
+  }else{
+    _img.style.display='none';_noImg.style.display='flex';
+  }
+
   // B: 商品情報
   setText('ship-barcode',item.バーコード);
   setText('ship-no',item.商品NO);
   setText('ship-bc-storage',item.保管バーコード);
   setText('ship-name',item.商品名);
   setText('ship-method',item.発送手段);
-  // C: 発送処理 - 現在のステータス表示
+
+  // C: 発送処理 - 現在のステータス表示ボタン
   document.getElementById('ship-cur-status').textContent=item.ステータス||'－';
-  // D: 詳細情報
-  setText('ship-condition',item.状態);
+
+  // D: 詳細情報 - ①状態をスプレッドシートの値で表示
+  const condVal=String(item.状態||'').trim();
+  document.getElementById('ship-condition').textContent=condVal||'-';
   setText('ship-maker',item.メーカー);
   setText('ship-color',item.カラー);
   setText('ship-size',item.サイズ数量);
   setText('ship-note',item.備考);
   setText('ship-buy-price',item.購入金額?'¥'+Number(item.購入金額).toLocaleString():'-');
   setText('ship-buy-date',item.購入日);
+
   // 販売済日デフォルト：今日
   const t=new Date();
   document.getElementById('ship-sold-date').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
   // 販売金額
   document.getElementById('ship-sell-price').value=item.販売金額?String(item.販売金額):'';
-  // チップ（販売済を除く6個）
+
+  // ③ チップ：SHIP_STATUSESの6個は変更しない
+  // 現在のステータス(shipStatus)と一致するチップのみハイライト
+  // 販売済など6個に含まれない場合は何もハイライトしない
   buildStatusChips('ship-status-chips',SHIP_STATUSES,()=>shipStatus,s=>{shipStatus=s;});
 }
 function saveShipping(){
@@ -702,8 +734,9 @@ function renderBulkList(){
   bulkItems.forEach((item,idx)=>{
     const d=document.createElement('div');d.className='bulk-item';
     const storageDisp=item.保管バーコード?` ／ 📍${item.保管バーコード}`:'';
-    const shipMethodDisp=item.発送手段?` ／ 🚚${item.発送手段}`:'';
-    d.innerHTML=`<div class="bulk-item-no">${idx+1}</div><div class="bulk-item-info"><div class="bulk-item-name">${item.商品名||'（商品名不明）'}</div><div class="bulk-item-sub">BC: ${item.バーコード} ／ ${item.ステータス||'-'}${storageDisp}${shipMethodDisp}</div></div><button class="bulk-item-del" onclick="removeBulkItem(${idx})">✕</button>`;
+    // ④ 発送手段：登録あれば2行目に表示、なければ非表示
+    const shipMethodLine=item.発送手段?`<div class="bulk-item-sub" style="margin-top:.2rem">🚚 ${item.発送手段}</div>`:'';
+    d.innerHTML=`<div class="bulk-item-no">${idx+1}</div><div class="bulk-item-info"><div class="bulk-item-name">${item.商品名||'（商品名不明）'}</div><div class="bulk-item-sub">BC: ${item.バーコード} ／ ${item.ステータス||'-'}${storageDisp}</div>${shipMethodLine}</div><button class="bulk-item-del" onclick="removeBulkItem(${idx})">✕</button>`;
     listEl.appendChild(d);
   });
   buildStatusChips('bulk-status-chips',ALL_STATUSES,()=>bulkStatus,s=>{bulkStatus=s;});
