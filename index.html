@@ -126,7 +126,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 .product-info-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:.4rem;}
 .info-row{display:grid;grid-template-columns:5rem 1fr;align-items:baseline;gap:.3rem;}
 .info-lbl{font-size:var(--fs-xs);font-weight:700;color:var(--hdr-orange);white-space:nowrap;}
-.info-val{font-size:var(--fs-sm);font-weight:700;color:var(--text-dark);line-height:1.3;word-break:break-all;}
+.info-val{font-size:var(--fs-sm);font-weight:700;color:var(--text-dark);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 /* ── C: 発送処理ブロック ── */
 /* ステータス行：1行表示 */
 .c-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem;}
@@ -165,11 +165,11 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 #ship-empty{text-align:center;padding:2.5rem 1rem;color:rgba(255,255,255,.7);font-size:var(--fs-md);line-height:1.8;}
 #ship-empty .empty-icon{font-size:4rem;margin-bottom:1rem;}
 /* ── 一括編集 ── */
-.bulk-item{background:var(--card-bg);border-radius:var(--r);padding:.7rem 1rem;margin-bottom:.5rem;display:flex;align-items:flex-start;gap:.8rem;box-shadow:0 1px 4px rgba(0,0,0,.1);}
-.bulk-item-no{width:2.4rem;height:2.4rem;border-radius:50%;background:var(--blue-mid);color:#fff;font-size:var(--fs-xs);font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.2rem;}
+.bulk-item{background:var(--card-bg);border-radius:var(--r);padding:.7rem 1rem;margin-bottom:.5rem;display:flex;align-items:center;gap:.8rem;box-shadow:0 1px 4px rgba(0,0,0,.1);}
+.bulk-item-no{width:2.4rem;height:2.4rem;border-radius:50%;background:var(--blue-mid);color:#fff;font-size:var(--fs-xs);font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .bulk-item-info{flex:1;min-width:0;}
-.bulk-item-name{font-size:var(--fs-sm);font-weight:700;color:var(--text-dark);word-break:break-all;line-height:1.3;}
-.bulk-item-sub{font-size:var(--fs-xs);color:#78909c;margin-top:.3rem;line-height:1.5;word-break:break-all;}
+.bulk-item-name{font-size:var(--fs-sm);font-weight:700;color:var(--text-dark);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.bulk-item-sub{font-size:var(--fs-xs);color:#78909c;margin-top:.2rem;}
 .bulk-item-del{width:3rem;height:3rem;border-radius:50%;background:var(--red);color:#fff;border:none;cursor:pointer;font-size:1.6rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .bulk-count{text-align:center;font-size:var(--fs-sm);font-weight:700;color:rgba(255,255,255,.8);margin-bottom:.6rem;}
 .bulk-form-section{background:var(--card-bg2);border-radius:1.2rem;padding:1rem;margin-bottom:.8rem;border:.1rem solid rgba(255,255,255,.2);}
@@ -371,20 +371,21 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
     <div class="bulk-form-section">
       <div class="bulk-form-title">● 一括で変更する項目を入力</div>
       <div style="font-size:var(--fs-xs);color:rgba(255,255,255,.6);margin-bottom:.7rem">※空欄の項目は変更されません</div>
-      <!-- ⑤ 保管場所バーコード（最上段・横長スキャンボタン） -->
-      <div class="form-row">
-        <div class="form-label">📦 保管場所バーコード</div>
-        <button class="big-btn btn-scan" style="width:100%;margin-bottom:.4rem;" onclick="startScan('bulk-storage')">📷 保管場所をスキャン</button>
-        <div id="bulk-storage-val" style="min-height:3.6rem;background:rgba(0,0,0,.25);border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:var(--fs-md);font-weight:700;color:#fff;padding:.4rem 1rem;letter-spacing:.05em;"></div>
-      </div>
       <div class="form-row">
         <div class="form-label">ステータス</div>
         <div class="chip-grp" id="bulk-status-chips"></div>
       </div>
-      <!-- ④ 状態（プルダウン） -->
       <div class="form-row">
-        <div class="form-label">🏷️ 状態</div>
-        <button class="sel-btn" onclick="openPopup('bulk-condition')"><span id="bulk-condition-val">選択してください</span><span>▼</span></button>
+        <div class="form-label">発送手段</div>
+        <button class="sel-btn" onclick="openPopup('bulk-ship-method')"><span id="bulk-ship-method-val">選択してください</span><span>▼</span></button>
+      </div>
+      <div class="form-row">
+        <div class="form-label">📅 販売済日</div>
+        <input type="date" class="inp" id="bulk-sold-date">
+      </div>
+      <div class="form-row">
+        <div class="form-label">💴 販売金額</div>
+        <div class="price-wrap" style="height:var(--h-inp)"><span class="price-prefix">¥</span><input type="text" inputmode="numeric" class="price-inp" id="bulk-sell-price" placeholder="0"></div>
       </div>
       <div class="form-row">
         <div class="form-label">📅 購入日</div>
@@ -426,9 +427,7 @@ const ALL_STATUSES=['在庫','検品済','保品','No有','出タイ待','出品
 
 let masters={statuses:ALL_STATUSES,shippings:[],shops:[],makers:[],nameList:[]};
 let shipItem=null,shipStatus='';
-// ④⑤ 状態・保管バーコードを追加
-const CONDITION_LIST=['未使用','未使用に近い','目立ったキズや汚れナシ','目立ったキズや汚れアリ','キズや汚れアリ','全体に状態が悪い'];
-let bulkItems=[],bulkStatus='',bulkShop='',bulkNameId='',bulkNameLabel='',bulkCondition='',bulkStorageBarcode='';
+let bulkItems=[],bulkStatus='',bulkShipMethod='',bulkShop='',bulkNameId='',bulkNameLabel='';
 let scanMode='',popupTarget='';
 
 // ── GAS通信 ──
@@ -453,9 +452,6 @@ function showDialog(title,msg,okCb,cancelCb){
 function closeDialog(){document.getElementById('dialog-ov').classList.remove('open');}
 function setText(id,val){const el=document.getElementById(id);if(el)el.textContent=val||'-';}
 function changeTab(n){
-  // ① タブ切り替え時に入力内容をクリア（2重変更防止）
-  if(n==='bulk') clearShip();
-  if(n==='ship') clearBulk();
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('screen-'+n).classList.add('active');
@@ -465,9 +461,9 @@ function changeTab(n){
 function openPopup(target){
   popupTarget=target;const listEl=document.getElementById('popup-list');listEl.innerHTML='';
   let items=[],title='選択',current='';
-  if(target==='bulk-shop'){title='店名';items=masters.shops;current=bulkShop;}
+  if(target==='bulk-ship-method'){title='発送手段';items=masters.shippings;current=bulkShipMethod;}
+  else if(target==='bulk-shop'){title='店名';items=masters.shops;current=bulkShop;}
   else if(target==='bulk-name'){title='商品名';items=masters.nameList.map(n=>n.name);current=bulkNameLabel;}
-  else if(target==='bulk-condition'){title='状態';items=CONDITION_LIST;current=bulkCondition;}
   document.getElementById('popup-title').textContent=title;
   items.forEach(item=>{
     const d=document.createElement('div');
@@ -478,9 +474,9 @@ function openPopup(target){
   document.getElementById('popup-ov').classList.add('open');
 }
 function selectPopupItem(val){
-  if(popupTarget==='bulk-shop'){bulkShop=val;document.getElementById('bulk-shop-val').textContent=val;}
+  if(popupTarget==='bulk-ship-method'){bulkShipMethod=val;document.getElementById('bulk-ship-method-val').textContent=val;}
+  else if(popupTarget==='bulk-shop'){bulkShop=val;document.getElementById('bulk-shop-val').textContent=val;}
   else if(popupTarget==='bulk-name'){bulkNameLabel=val;const f=masters.nameList.find(n=>n.name===val);bulkNameId=f?f.id:'';document.getElementById('bulk-name-val').textContent=val;}
-  else if(popupTarget==='bulk-condition'){bulkCondition=val;document.getElementById('bulk-condition-val').textContent=val;}
   closePopup();
 }
 function closePopup(){document.getElementById('popup-ov').classList.remove('open');}
@@ -563,14 +559,7 @@ function onScanSuccess(decodedText){
   if(navigator.vibrate)navigator.vibrate(80);
   stopScan().then(()=>{
     setTimeout(()=>{
-      // ⑤ 保管場所スキャンモード
-      if(scanMode==='bulk-storage'){
-        bulkStorageBarcode=decodedText.trim();
-        document.getElementById('bulk-storage-val').textContent='📍 '+bulkStorageBarcode;
-        showToast('✅ 保管場所: '+bulkStorageBarcode);
-      } else {
-        fetchProduct(decodedText.trim(),scanMode);
-      }
+      fetchProduct(decodedText.trim(),scanMode);
       scanCooldown=false;
     },200);
   });
@@ -604,20 +593,17 @@ function searchBulkManual(){
   fetchProduct(val,'bulk');
 }
 // ── 商品検索 ──
-function fetchProduct(keyword,mode){
+function fetchProduct(barcode,mode){
   showLoad('商品照合中...');
-  // barcode・keyword 両方渡す（GAS側はどちらでも検索可能）
-  gasCall('getProductByBarcode',{barcode:keyword,keyword:keyword},res=>{
+  gasCall('getProductByBarcode',{barcode:barcode},res=>{
     hideLoad();
     if(res&&res.found){if(mode==='ship')showShipDetail(res.item);else addBulkItem(res.item);}
-    else showToast('⚠️ 未登録のバーコード / 商品NOです','err');
+    else showToast('⚠️ 未登録のバーコードです','err');
   },()=>{hideLoad();showToast('⚠️ 通信エラー','err');});
 }
 // ── TAB1 発送作業 ──
 function showShipDetail(item){
-  shipItem=item;
-  // 現在のステータスをチップにハイライト表示（並び順は固定）
-  shipStatus=item.ステータス||'';
+  shipItem=item;shipStatus=item.ステータス||'';
   document.getElementById('ship-empty').style.display='none';
   document.getElementById('ship-detail').style.display='block';
   // 画像（Google Drive thumbnail URLで表示）
@@ -663,15 +649,12 @@ function saveShipping(){
   if(!shipStatus){showToast('⚠️ ステータスを選択してください','err');return;}
   const soldDate=document.getElementById('ship-sold-date').value;
   if(!soldDate){showToast('⚠️ 販売済日を入力してください','err');return;}
-  // ② 販売金額が空 or 0 の場合はエラー
-  const sellPriceRaw=document.getElementById('ship-sell-price').value.replace(/[^0-9]/g,'');
-  if(!sellPriceRaw||Number(sellPriceRaw)===0){showToast('⚠️ 販売金額を入力してください','err');return;}
-  const sellPrice=Number(sellPriceRaw);
+  const sellPrice=document.getElementById('ship-sell-price').value.replace(/[^0-9]/g,'');
   showDialog('発送処理を保存',
-    '商品NO: '+shipItem.商品NO+'\n変更前: '+shipItem.ステータス+' → 変更後: '+shipStatus+'\n発送日: '+soldDate.replace(/-/g,'/')+'\n\n保存しますか？',
+    '商品NO: '+shipItem.商品NO+'\nステータス: '+shipStatus+'\n発送日: '+soldDate.replace(/-/g,'/')+'\n\n保存しますか？',
     ()=>{
       showLoad('保存中...');
-      gasCall('updateShipping',{rowIndex:shipItem.rowIndex,ステータス:shipStatus,販売済日:soldDate.replace(/-/g,'/'),販売金額:sellPrice},
+      gasCall('updateShipping',{rowIndex:shipItem.rowIndex,ステータス:shipStatus,販売済日:soldDate.replace(/-/g,'/'),販売金額:sellPrice?Number(sellPrice):undefined},
         res=>{hideLoad();if(res&&res.ok){showToast('✅ 保存しました');clearShip();}else showToast('⚠️ 保存に失敗しました','err');},
         ()=>{hideLoad();showToast('⚠️ 通信エラー','err');});
     },null);
@@ -694,9 +677,7 @@ function renderBulkList(){
   listEl.innerHTML='';
   bulkItems.forEach((item,idx)=>{
     const d=document.createElement('div');d.className='bulk-item';
-    const storageDisp=item.保管バーコード?` ／ 📍${item.保管バーコード}`:'';
-    const shipMethodDisp=item.発送手段?` ／ 🚚${item.発送手段}`:'';
-    d.innerHTML=`<div class="bulk-item-no">${idx+1}</div><div class="bulk-item-info"><div class="bulk-item-name">${item.商品名||'（商品名不明）'}</div><div class="bulk-item-sub">BC: ${item.バーコード} ／ ${item.ステータス||'-'}${storageDisp}${shipMethodDisp}</div></div><button class="bulk-item-del" onclick="removeBulkItem(${idx})">✕</button>`;
+    d.innerHTML=`<div class="bulk-item-no">${idx+1}</div><div class="bulk-item-info"><div class="bulk-item-name">${item.商品名||'（商品名不明）'}</div><div class="bulk-item-sub">BC: ${item.バーコード} ／ ${item.ステータス||'-'}</div></div><button class="bulk-item-del" onclick="removeBulkItem(${idx})">✕</button>`;
     listEl.appendChild(d);
   });
   buildStatusChips('bulk-status-chips',ALL_STATUSES,()=>bulkStatus,s=>{bulkStatus=s;});
@@ -704,19 +685,17 @@ function renderBulkList(){
 function removeBulkItem(idx){bulkItems.splice(idx,1);renderBulkList();}
 function saveBulk(){
   if(bulkItems.length===0){showToast('⚠️ 商品をスキャンしてください','err');return;}
-  const buyDate=document.getElementById('bulk-buy-date').value;
-  const buyPrice=document.getElementById('bulk-buy-price').value.replace(/[^0-9]/g,'');
+  const soldDate=document.getElementById('bulk-sold-date').value,buyDate=document.getElementById('bulk-buy-date').value;
+  const sellPrice=document.getElementById('bulk-sell-price').value.replace(/[^0-9]/g,''),buyPrice=document.getElementById('bulk-buy-price').value.replace(/[^0-9]/g,'');
   showDialog('一括保存の確認',bulkItems.length+'件をまとめて保存します\nよろしいですか？',
     ()=>{
       showLoad('一括保存中...');
       const items=bulkItems.map(item=>{
         const p={rowIndex:item.rowIndex};
-        if(bulkStatus)p.ステータス=bulkStatus;
-        if(buyDate)p.購入日=buyDate.replace(/-/g,'/');
-        if(buyPrice)p.購入金額=Number(buyPrice);
+        if(bulkStatus)p.ステータス=bulkStatus;if(bulkShipMethod)p.発送手段=bulkShipMethod;
+        if(soldDate)p.販売済日=soldDate.replace(/-/g,'/');if(buyDate)p.購入日=buyDate.replace(/-/g,'/');
+        if(sellPrice)p.販売金額=Number(sellPrice);if(buyPrice)p.購入金額=Number(buyPrice);
         if(bulkShop)p.店名=bulkShop;if(bulkNameId)p.商品名ID=bulkNameId;
-        if(bulkCondition)p.状態=bulkCondition;
-        if(bulkStorageBarcode)p.保管バーコード=bulkStorageBarcode;
         return p;
       });
       gasCall('bulkUpdate',{items:items},
@@ -725,12 +704,11 @@ function saveBulk(){
     },null);
 }
 function clearBulk(){
-  bulkItems=[];bulkStatus='';bulkShop='';bulkNameId='';bulkNameLabel='';bulkCondition='';bulkStorageBarcode='';
-  ['bulk-buy-date','bulk-buy-price'].forEach(id=>document.getElementById(id).value='');
+  bulkItems=[];bulkStatus='';bulkShipMethod='';bulkShop='';bulkNameId='';bulkNameLabel='';
+  ['bulk-sold-date','bulk-buy-date','bulk-sell-price','bulk-buy-price'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('bulk-ship-method-val').textContent='選択してください';
   document.getElementById('bulk-shop-val').textContent='選択してください';
   document.getElementById('bulk-name-val').textContent='選択してください';
-  document.getElementById('bulk-condition-val').textContent='選択してください';
-  document.getElementById('bulk-storage-val').textContent='';
   renderBulkList();
 }
 // ── 初期化 ──
