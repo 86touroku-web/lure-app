@@ -126,7 +126,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 .product-info-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:.4rem;}
 .info-row{display:grid;grid-template-columns:5rem 1fr;align-items:baseline;gap:.3rem;}
 .info-lbl{font-size:var(--fs-xs);font-weight:700;color:var(--hdr-orange);white-space:nowrap;}
-.info-val{font-size:var(--fs-sm);font-weight:700;color:var(--text-dark);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.info-val{font-size:var(--fs-sm);font-weight:700;color:var(--text-dark);line-height:1.3;word-break:break-all;}
 /* ── C: 発送処理ブロック ── */
 /* ステータス行：1行表示 */
 .c-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem;}
@@ -165,11 +165,11 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 #ship-empty{text-align:center;padding:2.5rem 1rem;color:rgba(255,255,255,.7);font-size:var(--fs-md);line-height:1.8;}
 #ship-empty .empty-icon{font-size:4rem;margin-bottom:1rem;}
 /* ── 一括編集 ── */
-.bulk-item{background:var(--card-bg);border-radius:var(--r);padding:.7rem 1rem;margin-bottom:.5rem;display:flex;align-items:center;gap:.8rem;box-shadow:0 1px 4px rgba(0,0,0,.1);}
-.bulk-item-no{width:2.4rem;height:2.4rem;border-radius:50%;background:var(--blue-mid);color:#fff;font-size:var(--fs-xs);font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.bulk-item{background:var(--card-bg);border-radius:var(--r);padding:.7rem 1rem;margin-bottom:.5rem;display:flex;align-items:flex-start;gap:.8rem;box-shadow:0 1px 4px rgba(0,0,0,.1);}
+.bulk-item-no{width:2.4rem;height:2.4rem;border-radius:50%;background:var(--blue-mid);color:#fff;font-size:var(--fs-xs);font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.2rem;}
 .bulk-item-info{flex:1;min-width:0;}
-.bulk-item-name{font-size:var(--fs-sm);font-weight:700;color:var(--text-dark);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.bulk-item-sub{font-size:var(--fs-xs);color:#78909c;margin-top:.2rem;}
+.bulk-item-name{font-size:var(--fs-sm);font-weight:700;color:var(--text-dark);word-break:break-all;line-height:1.3;}
+.bulk-item-sub{font-size:var(--fs-xs);color:#78909c;margin-top:.3rem;line-height:1.5;word-break:break-all;}
 .bulk-item-del{width:3rem;height:3rem;border-radius:50%;background:var(--red);color:#fff;border:none;cursor:pointer;font-size:1.6rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .bulk-count{text-align:center;font-size:var(--fs-sm);font-weight:700;color:rgba(255,255,255,.8);margin-bottom:.6rem;}
 .bulk-form-section{background:var(--card-bg2);border-radius:1.2rem;padding:1rem;margin-bottom:.8rem;border:.1rem solid rgba(255,255,255,.2);}
@@ -431,11 +431,18 @@ const CONDITION_LIST=['未使用','未使用に近い','目立ったキズや汚
 let bulkItems=[],bulkStatus='',bulkShop='',bulkNameId='',bulkNameLabel='',bulkCondition='',bulkStorageBarcode='';
 let scanMode='',popupTarget='';
 
-// ── GAS通信 ──
+// ── GAS通信（JSONP方式でCORS回避） ──
 function gasCall(fn,payload,ok,ng){
   if(IS_GAS){google.script.run.withSuccessHandler(r=>{if(ok)ok(r);}).withFailureHandler(e=>{if(ng)ng(e);else showToast('⚠️ 通信エラー','err');})[fn](payload);return;}
-  const url=GAS_URL+'?fn='+encodeURIComponent(fn)+'&payload='+encodeURIComponent(JSON.stringify(payload));
-  fetch(url).then(r=>r.json()).then(r=>{if(ok)ok(r);}).catch(e=>{if(ng)ng(e);else showToast('⚠️ 通信エラー','err');});
+  const cbName='_gasCallback_'+Date.now();
+  const script=document.createElement('script');
+  let done=false;
+  const timer=setTimeout(()=>{if(!done){done=true;cleanup();if(ng)ng(new Error('timeout'));else showToast('⚠️ 通信タイムアウト','err');}},15000);
+  function cleanup(){delete window[cbName];if(script.parentNode)script.parentNode.removeChild(script);clearTimeout(timer);}
+  window[cbName]=function(r){if(done)return;done=true;cleanup();if(ok)ok(r);};
+  script.onerror=function(){if(done)return;done=true;cleanup();if(ng)ng(new Error('script error'));else showToast('⚠️ 通信エラー','err');};
+  script.src=GAS_URL+'?fn='+encodeURIComponent(fn)+'&payload='+encodeURIComponent(JSON.stringify(payload))+'&callback='+cbName;
+  document.head.appendChild(script);
 }
 // ── UI共通 ──
 function showLoad(m){document.getElementById('loading-msg').textContent=m||'処理中...';document.getElementById('loading-ov').classList.add('show');}
@@ -695,7 +702,8 @@ function renderBulkList(){
   bulkItems.forEach((item,idx)=>{
     const d=document.createElement('div');d.className='bulk-item';
     const storageDisp=item.保管バーコード?` ／ 📍${item.保管バーコード}`:'';
-    d.innerHTML=`<div class="bulk-item-no">${idx+1}</div><div class="bulk-item-info"><div class="bulk-item-name">${item.商品名||'（商品名不明）'}</div><div class="bulk-item-sub">BC: ${item.バーコード} ／ ${item.ステータス||'-'}${storageDisp}</div></div><button class="bulk-item-del" onclick="removeBulkItem(${idx})">✕</button>`;
+    const shipMethodDisp=item.発送手段?` ／ 🚚${item.発送手段}`:'';
+    d.innerHTML=`<div class="bulk-item-no">${idx+1}</div><div class="bulk-item-info"><div class="bulk-item-name">${item.商品名||'（商品名不明）'}</div><div class="bulk-item-sub">BC: ${item.バーコード} ／ ${item.ステータス||'-'}${storageDisp}${shipMethodDisp}</div></div><button class="bulk-item-del" onclick="removeBulkItem(${idx})">✕</button>`;
     listEl.appendChild(d);
   });
   buildStatusChips('bulk-status-chips',ALL_STATUSES,()=>bulkStatus,s=>{bulkStatus=s;});
