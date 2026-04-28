@@ -173,12 +173,13 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 #ship-empty{text-align:center;padding:2.5rem 1rem;color:rgba(255,255,255,.7);font-size:var(--fs-md);line-height:1.8;}
 #ship-empty .empty-icon{font-size:4rem;margin-bottom:1rem;}
 /* ── 一括編集 ── */
-.bulk-item{background:var(--card-bg);border-radius:var(--r);padding:.7rem 1rem;margin-bottom:.5rem;display:flex;align-items:flex-start;gap:.8rem;box-shadow:0 1px 4px rgba(0,0,0,.1);min-height:4.5rem;}
+.bulk-item{background:var(--card-bg);border-radius:var(--r);padding:1rem 1rem;margin-bottom:.5rem;display:flex;align-items:flex-start;gap:.8rem;box-shadow:0 1px 4px rgba(0,0,0,.1);min-height:6.5rem;}
 .bulk-item-no{width:2.4rem;height:2.4rem;border-radius:50%;background:var(--blue-mid);color:#fff;font-size:var(--fs-xs);font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.2rem;}
 .bulk-item-info{flex:1;min-width:0;}
 .bulk-item-name{font-size:var(--fs-sm);font-weight:700;color:var(--text-dark);word-break:break-all;line-height:1.3;}
-.bulk-item-sub{font-size:var(--fs-xs);color:#78909c;margin-top:.3rem;line-height:1.6;word-break:break-all;white-space:normal;}
-.bulk-item-sub-ship{font-size:var(--fs-xs);color:#546e7a;margin-top:.2rem;line-height:1.5;}
+.bulk-item-sub{font-size:var(--fs-sm);color:#37474f;margin-top:.35rem;line-height:1.6;word-break:break-all;white-space:normal;}
+.bulk-item-sub-ship{font-size:var(--fs-sm);color:#37474f;margin-top:.25rem;line-height:1.5;}
+.bulk-item-sub-cond{font-size:var(--fs-sm);color:#37474f;margin-top:.25rem;line-height:1.5;}
 .bulk-item-del{width:3rem;height:3rem;border-radius:50%;background:var(--red);color:#fff;border:none;cursor:pointer;font-size:1.6rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .bulk-count{text-align:center;font-size:var(--fs-sm);font-weight:700;color:rgba(255,255,255,.8);margin-bottom:.6rem;}
 .bulk-form-section{background:var(--card-bg2);border-radius:1.2rem;padding:1rem;margin-bottom:.8rem;border:.1rem solid rgba(255,255,255,.2);}
@@ -747,10 +748,13 @@ function renderBulkList(){
   bulkItems.forEach((item,idx)=>{
     const d=document.createElement('div');d.className='bulk-item';
     const storageDisp=item.保管バーコード?` ／ 📍${item.保管バーコード}`:'';
-    // ④ 発送手段：2行目に独立表示。未登録の場合は非表示
+    // 発送手段：2行目（未登録は非表示）
     const shipLine=item.発送手段
       ?`<div class="bulk-item-sub-ship">🚚 ${item.発送手段}</div>`:'';
-    d.innerHTML=`<div class="bulk-item-no">${idx+1}</div><div class="bulk-item-info"><div class="bulk-item-name">${item.商品名||'（商品名不明）'}</div><div class="bulk-item-sub">BC: ${item.バーコード} ／ ${item.ステータス||'-'}${storageDisp}</div>${shipLine}</div><button class="bulk-item-del" onclick="removeBulkItem(${idx})">✕</button>`;
+    // 状態：3行目（未登録は非表示）
+    const condLine=item.状態
+      ?`<div class="bulk-item-sub-cond">🏷️ ${item.状態}</div>`:'';
+    d.innerHTML=`<div class="bulk-item-no">${idx+1}</div><div class="bulk-item-info"><div class="bulk-item-name">${item.商品名||'（商品名不明）'}</div><div class="bulk-item-sub">BC: ${item.バーコード} ／ ${item.ステータス||'-'}${storageDisp}</div>${shipLine}${condLine}</div><button class="bulk-item-del" onclick="removeBulkItem(${idx})">✕</button>`;
     listEl.appendChild(d);
   });
   buildStatusChips('bulk-status-chips',ALL_STATUSES,()=>bulkStatus,s=>{bulkStatus=s;});
