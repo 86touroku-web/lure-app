@@ -133,17 +133,20 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 .c-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem;}
 .c-lbl{font-size:var(--fs-sm);font-weight:700;color:var(--hdr-blue);white-space:nowrap;flex:0 0 5.5rem;}
 .c-val{flex:1;}
-/* 現在のステータス表示ボタン（デフォルト：グレー） */
+/* 販売済ボタン（デフォルト：チップと同じグレー消灯） */
 .cur-status-btn{
-  width:100%;height:4rem;border-radius:var(--r);border:none;
-  font-size:var(--fs-md);font-weight:800;cursor:default;
-  background:linear-gradient(90deg,#78909c,#90a4ae);color:#fff;
+  width:100%;height:4rem;border-radius:var(--r);
+  border:.15rem solid #cfd8dc;
+  font-size:var(--fs-md);font-weight:800;cursor:pointer;
+  background:#f0f4f8;color:var(--text-mid);
   display:flex;align-items:center;justify-content:center;
-  box-shadow:0 2px 6px rgba(0,0,0,.2);letter-spacing:.05em;
+  box-shadow:none;letter-spacing:.05em;
 }
-/* 販売済の時のみ青ハイライト */
+/* 販売済ハイライトON（青点灯） */
 .cur-status-btn.sold{
-  background:linear-gradient(90deg,#1565c0,#1976d2);
+  background:var(--blue-mid);color:#fff;
+  border-color:var(--blue-mid);
+  box-shadow:0 2px 6px rgba(0,0,0,.2);
 }
 /* ステータスチップ（販売済を除く6個） */
 .chip-grp{display:flex;flex-wrap:nowrap;gap:.3rem;margin-bottom:.5rem;}
@@ -300,8 +303,8 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
       <div class="c-row">
         <span class="c-lbl">ステータス</span>
         <div class="c-val">
-          <!-- 現在のステータス（横幅2倍・表示のみ） -->
-          <div class="cur-status-btn" id="ship-cur-status">－</div>
+          <!-- 販売済ボタン：常に「販売済」固定テキスト・タップでステータス変更 -->
+          <div class="cur-status-btn" id="ship-cur-status" onclick="selectSold()">販売済</div>
         </div>
       </div>
       <!-- 変更チップ（販売済を除く6個） -->
@@ -422,7 +425,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 </div>
 
 <script>
-const GAS_URL='https://script.google.com/macros/s/AKfycbwszCwfSETnzE2RvEMb2qXCPPuqgD8Ybu6efEw6t714REwHQVJtEE-Qu7WeWZx-oGZ12w/exec';
+const GAS_URL='https://script.google.com/macros/s/AKfycbzaeu3ATr2_vxLbi4IX2YP1SCSITgTxc-IOY4hdIVRLAFJNWrLaOkvT_un9kvCWiE1sbg/exec';
 const IS_GAS=(typeof google!=='undefined')&&google.script&&google.script.run;
 // 発送処理チップ：販売済を除く6個
 const SHIP_STATUSES=['在庫','検品済','保品','No有','出タイ待','出品'];
@@ -496,6 +499,16 @@ function selectPopupItem(val){
   closePopup();
 }
 function closePopup(){document.getElementById('popup-ov').classList.remove('open');}
+// ── 販売済ボタンタップ処理 ──
+function selectSold(){
+  if(!shipItem)return;
+  // 販売済をshipStatusにセット
+  shipStatus='販売済';
+  // 販売済ボタンを青点灯
+  document.getElementById('ship-cur-status').classList.add('sold');
+  // チップを全て消灯（販売済は6個チップに含まれないため全解除）
+  document.querySelectorAll('#ship-status-chips .chip').forEach(c=>c.classList.remove('sel'));
+}
 // ── ステータスチップ ──
 function buildStatusChips(id,statusList,getV,setV){
   const grp=document.getElementById(id);grp.innerHTML='';
@@ -661,10 +674,9 @@ function showShipDetail(item){
   setText('ship-name',item.商品名);
   setText('ship-method',item.発送手段);
 
-  // C: 現在のステータス表示ボタン
-  // 「販売済」の時のみ青ボタン、それ以外はグレーボタン
+  // C: 販売済ボタン：テキストは常に「販売済」固定
+  // 現在値が「販売済」→青点灯、それ以外→グレー消灯
   const _curBtn=document.getElementById('ship-cur-status');
-  _curBtn.textContent=item.ステータス||'－';
   if(item.ステータス==='販売済'){
     _curBtn.classList.add('sold');
   }else{
@@ -688,15 +700,14 @@ function showShipDetail(item){
     t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
   document.getElementById('ship-sell-price').value=item.販売金額?String(item.販売金額):'';
 
-  // ③ ステータスチップ：現在値と一致する1個のみハイライト
-  // 販売済など6個に含まれない場合は何もハイライトしない
-  // チップタップ時：青ボタンのテキスト・色も連動更新
+  // ③ ステータスチップ（6個固定・並び順変更不可）
+  // 現在値と一致するチップ1個のみハイライト
+  // 販売済の場合は6個に含まれないため何もハイライトしない
+  // チップタップ時：shipStatusを更新・販売済ボタンはグレーに戻す
   buildStatusChips('ship-status-chips',SHIP_STATUSES,()=>shipStatus,s=>{
     shipStatus=s;
-    const _b=document.getElementById('ship-cur-status');
-    _b.textContent=s;
-    // チップは6個（販売済なし）なのでグレーのまま
-    _b.classList.remove('sold');
+    // チップ選択→販売済ボタンをグレー消灯に戻す
+    document.getElementById('ship-cur-status').classList.remove('sold');
   });
 }
 function saveShipping(){
