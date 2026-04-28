@@ -19,7 +19,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
   --tab-h:7rem;--h-inp:4.4rem;--h-btn:4.8rem;--r:.8rem;
   --fs-xs:1.1rem;--fs-sm:1.25rem;--fs-md:1.4rem;--fs-lg:1.7rem;
   --hdr-red:#e53935;--hdr-orange:#e65100;--hdr-blue:#1565c0;--hdr-green:#00F562;
-  --bg-red:#ffd6d6;--bg-orange:#ffd9b3;--bg-blue:#c2d9ff;--bg-green:#b3ffda;
+  --bg-red:#fff5f5;--bg-orange:#fff8f0;--bg-blue:#f0f6ff;--bg-green:#f0fff6;
 }
 /* ── LOADING ── */
 .loading-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999;flex-direction:column;align-items:center;justify-content:center;gap:1.2rem;}
@@ -133,17 +133,13 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 .c-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem;}
 .c-lbl{font-size:var(--fs-sm);font-weight:700;color:var(--hdr-blue);white-space:nowrap;flex:0 0 5.5rem;}
 .c-val{flex:1;}
-/* 現在のステータス表示ボタン（デフォルト：グレー） */
+/* 現在のステータス表示ボタン（横幅2倍・表示のみ） */
 .cur-status-btn{
   width:100%;height:4rem;border-radius:var(--r);border:none;
   font-size:var(--fs-md);font-weight:800;cursor:default;
-  background:linear-gradient(90deg,#78909c,#90a4ae);color:#fff;
+  background:linear-gradient(90deg,#1565c0,#1976d2);color:#fff;
   display:flex;align-items:center;justify-content:center;
   box-shadow:0 2px 6px rgba(0,0,0,.2);letter-spacing:.05em;
-}
-/* 販売済の時のみ青ハイライト */
-.cur-status-btn.sold{
-  background:linear-gradient(90deg,#1565c0,#1976d2);
 }
 /* ステータスチップ（販売済を除く6個） */
 .chip-grp{display:flex;flex-wrap:nowrap;gap:.3rem;margin-bottom:.5rem;}
@@ -662,14 +658,7 @@ function showShipDetail(item){
   setText('ship-method',item.発送手段);
 
   // C: 現在のステータス表示ボタン
-  // 「販売済」の時のみ青ボタン、それ以外はグレーボタン
-  const _curBtn=document.getElementById('ship-cur-status');
-  _curBtn.textContent=item.ステータス||'－';
-  if(item.ステータス==='販売済'){
-    _curBtn.classList.add('sold');
-  }else{
-    _curBtn.classList.remove('sold');
-  }
+  document.getElementById('ship-cur-status').textContent=item.ステータス||'－';
 
   // ① 状態：スプレッドシートの値を直接表示
   const _condEl=document.getElementById('ship-condition');
@@ -690,14 +679,7 @@ function showShipDetail(item){
 
   // ③ ステータスチップ：現在値と一致する1個のみハイライト
   // 販売済など6個に含まれない場合は何もハイライトしない
-  // チップタップ時：青ボタンのテキスト・色も連動更新
-  buildStatusChips('ship-status-chips',SHIP_STATUSES,()=>shipStatus,s=>{
-    shipStatus=s;
-    const _b=document.getElementById('ship-cur-status');
-    _b.textContent=s;
-    // チップは6個（販売済なし）なのでグレーのまま
-    _b.classList.remove('sold');
-  });
+  buildStatusChips('ship-status-chips',SHIP_STATUSES,()=>shipStatus,s=>{shipStatus=s;});
 }
 function saveShipping(){
   if(!shipItem){showToast('⚠️ 商品をスキャンしてください','err');return;}
