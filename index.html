@@ -418,7 +418,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 </div>
 
 <script>
-const GAS_URL='https://script.google.com/macros/s/AKfycbwszCwfSETnzE2RvEMb2qXCPPuqgD8Ybu6efEw6t714REwHQVJtEE-Qu7WeWZx-oGZ12w/exec';
+const GAS_URL='https://script.google.com/macros/s/AKfycbzaeu3ATr2_vxLbi4IX2YP1SCSITgTxc-IOY4hdIVRLAFJNWrLaOkvT_un9kvCWiE1sbg/exec';
 const IS_GAS=(typeof google!=='undefined')&&google.script&&google.script.run;
 // 発送処理チップ：販売済を除く6個
 const SHIP_STATUSES=['在庫','検品済','保品','No有','出タイ待','出品'];
@@ -432,7 +432,7 @@ const CONDITION_LIST=['未使用','未使用に近い','目立ったキズや汚
 let bulkItems=[],bulkStatus='',bulkShop='',bulkNameId='',bulkNameLabel='',bulkCondition='',bulkStorageBarcode='';
 let scanMode='',popupTarget='';
 
-// ── GAS通信（JSONP方式でCORS回避） ──
+// ── GAS通信（JSONP方式・GASのcallback対応） ──
 function gasCall(fn,payload,ok,ng){
   if(IS_GAS){google.script.run.withSuccessHandler(r=>{if(ok)ok(r);}).withFailureHandler(e=>{if(ng)ng(e);else showToast('⚠️ 通信エラー','err');})[fn](payload);return;}
   const cbName='_gasCallback_'+Date.now();
@@ -628,43 +628,27 @@ function showShipDetail(item){
   document.getElementById('ship-empty').style.display='none';
   document.getElementById('ship-detail').style.display='block';
 
-  // ⑤ 画像表示（JS側で一元管理・onerror競合解消）
+  // ⑤ 画像表示（JS側で一元管理）
   const _img=document.getElementById('ship-img');
   const _noImg=document.getElementById('ship-no-img');
-  // 前回のハンドラをリセット
-  _img.onload=null;
-  _img.onerror=null;
-  _img.src='';
+  _img.onload=null;_img.onerror=null;_img.src='';
   if(item.imgUrl){
     const _m=item.imgUrl.match(/[?&]id=([^&]+)/);
     if(_m){
       const _fid=_m[1];
       let _retried=false;
-      _img.onload=function(){
-        _img.style.display='block';
-        _noImg.style.display='none';
-      };
+      _img.onload=function(){_img.style.display='block';_noImg.style.display='none';};
       _img.onerror=function(){
         if(!_retried){
-          // thumbnail失敗→lh3フォールバック
           _retried=true;
-          _img.onerror=function(){
-            _img.style.display='none';
-            _noImg.style.display='flex';
-          };
+          _img.onerror=function(){_img.style.display='none';_noImg.style.display='flex';};
           _img.src='https://lh3.googleusercontent.com/d/'+_fid+'=w400';
         }
       };
-      // 初期状態：画像なし表示・imgは非表示（onloadで切替）
-      _noImg.style.display='flex';
-      _img.style.display='none';
+      _noImg.style.display='flex';_img.style.display='none';
       _img.src='https://drive.google.com/thumbnail?id='+_fid+'&sz=w400';
-    }else{
-      _img.style.display='none';_noImg.style.display='flex';
-    }
-  }else{
-    _img.style.display='none';_noImg.style.display='flex';
-  }
+    }else{_img.style.display='none';_noImg.style.display='flex';}
+  }else{_img.style.display='none';_noImg.style.display='flex';}
 
   // B: 商品情報
   setText('ship-barcode',item.バーコード);
@@ -673,13 +657,12 @@ function showShipDetail(item){
   setText('ship-name',item.商品名);
   setText('ship-method',item.発送手段);
 
-  // C: 発送処理 - 現在のステータス表示ボタン
+  // C: 現在のステータス表示ボタン
   document.getElementById('ship-cur-status').textContent=item.ステータス||'－';
 
   // ① 状態：スプレッドシートの値を直接表示
-  const _cond=String(item.状態||'').trim();
   const _condEl=document.getElementById('ship-condition');
-  if(_condEl)_condEl.textContent=_cond||'-';
+  if(_condEl)_condEl.textContent=String(item.状態||'').trim()||'-';
 
   setText('ship-maker',item.メーカー);
   setText('ship-color',item.カラー);
@@ -692,12 +675,10 @@ function showShipDetail(item){
   const t=new Date();
   document.getElementById('ship-sold-date').value=
     t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
-  // 販売金額
   document.getElementById('ship-sell-price').value=item.販売金額?String(item.販売金額):'';
 
-  // ③ ステータスチップ：現在のステータスと一致する1個のみハイライト
-  // SHIP_STATUSESは販売済を除く6個・レイアウト変更なし
-  // 現ステータスが「販売済」など6個に含まれない場合は何もハイライトしない
+  // ③ ステータスチップ：現在値と一致する1個のみハイライト
+  // 販売済など6個に含まれない場合は何もハイライトしない
   buildStatusChips('ship-status-chips',SHIP_STATUSES,()=>shipStatus,s=>{shipStatus=s;});
 }
 function saveShipping(){
@@ -739,8 +720,7 @@ function renderBulkList(){
     const storageDisp=item.保管バーコード?` ／ 📍${item.保管バーコード}`:'';
     // ④ 発送手段：2行目に独立表示。未登録の場合は非表示
     const shipLine=item.発送手段
-      ?`<div class="bulk-item-sub-ship">🚚 ${item.発送手段}</div>`
-      :'';
+      ?`<div class="bulk-item-sub-ship">🚚 ${item.発送手段}</div>`:'';
     d.innerHTML=`<div class="bulk-item-no">${idx+1}</div><div class="bulk-item-info"><div class="bulk-item-name">${item.商品名||'（商品名不明）'}</div><div class="bulk-item-sub">BC: ${item.バーコード} ／ ${item.ステータス||'-'}${storageDisp}</div>${shipLine}</div><button class="bulk-item-del" onclick="removeBulkItem(${idx})">✕</button>`;
     listEl.appendChild(d);
   });
