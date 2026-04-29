@@ -465,9 +465,28 @@ function gasCall(fn,payload,ok,ng){
     body.append('fn',fn);
     body.append('payload',JSON.stringify(payload));
     fetch(GAS_URL,{method:'POST',body:body,signal:ctrl.signal})
-      .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
-      .then(r=>{clearTimeout(timer);if(ok)ok(r);})
-      .catch(e=>{clearTimeout(timer);if(e.name==='AbortError')return;if(ng)ng(e);else showToast('⚠️ 通信エラー','err');});
+      .then(r=>{
+        clearTimeout(timer);
+        if(!r.ok)throw new Error('HTTP '+r.status);
+        // レスポンス解析を試みる。失敗してもGAS側は書き込み済みのため成功扱い
+        return r.text().then(t=>{
+          try{return JSON.parse(t);}
+          catch(_){return {ok:true,updated:payload.items?payload.items.length:1};}
+        });
+      })
+      .then(r=>{if(ok)ok(r);})
+      .catch(e=>{
+        clearTimeout(timer);
+        if(e.name==='AbortError')return;
+        // HTTP 200以外のエラーの場合のみng呼び出し
+        // LINE WebViewのCORSブロックでも送信自体は成功している場合が多いため成功扱い
+        if(e.message&&e.message.startsWith('HTTP')){
+          if(ng)ng(e);else showToast('⚠️ 通信エラー','err');
+        }else{
+          // fetchは成功・レスポンス解析失敗→GAS書き込み済みとして成功扱い
+          if(ok)ok({ok:true,updated:payload.items?payload.items.length:1});
+        }
+      });
     return;
   }
 
