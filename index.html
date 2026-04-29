@@ -152,6 +152,10 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 .chip-grp{display:flex;flex-wrap:nowrap;gap:.3rem;margin-bottom:.5rem;}
 .chip{flex:1;padding:.35rem .2rem;border-radius:2rem;border:.15rem solid #cfd8dc;cursor:pointer;font-size:var(--fs-sm);font-weight:700;background:#f0f4f8;color:var(--text-mid);white-space:nowrap;text-align:center;}
 .chip.sel{background:var(--blue-mid);color:#fff;border-color:var(--blue-mid);}
+/* 在庫確認チップ（有・無 各1/2幅） */
+.stock-chip-grp{display:flex;gap:.5rem;margin-top:.3rem;}
+.stock-chip{flex:1;padding:.35rem .2rem;border-radius:2rem;border:.15rem solid #cfd8dc;cursor:pointer;font-size:var(--fs-sm);font-weight:700;background:#f0f4f8;color:var(--text-mid);text-align:center;}
+.stock-chip.sel{background:var(--blue-mid);color:#fff;border-color:var(--blue-mid);}
 .divider{height:.1rem;background:#e0e0e0;margin:.5rem 0;}
 /* 販売済日・販売金額：1行表示 */
 .edit-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;}
@@ -411,6 +415,14 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
         <div class="form-label">📦 商品名</div>
         <button class="sel-btn" onclick="openPopup('bulk-name')"><span id="bulk-name-val">選択してください</span><span>▼</span></button>
       </div>
+      <!-- 在庫確認チップ（有・無） -->
+      <div class="form-row">
+        <div class="form-label">📋 在庫確認</div>
+        <div class="stock-chip-grp">
+          <button class="stock-chip" id="stock-chip-yes" onclick="selectStockCheck('有')">有</button>
+          <button class="stock-chip" id="stock-chip-no"  onclick="selectStockCheck('無')">無</button>
+        </div>
+      </div>
     </div>
     <div class="btn-row" style="margin-bottom:1rem">
       <button class="big-btn btn-save"   onclick="saveBulk()">💾 一括保存</button>
@@ -426,7 +438,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 </div>
 
 <script>
-const GAS_URL='https://script.google.com/macros/s/AKfycbwszCwfSETnzE2RvEMb2qXCPPuqgD8Ybu6efEw6t714REwHQVJtEE-Qu7WeWZx-oGZ12w/exec';
+const GAS_URL='https://script.google.com/macros/s/AKfycbzaeu3ATr2_vxLbi4IX2YP1SCSITgTxc-IOY4hdIVRLAFJNWrLaOkvT_un9kvCWiE1sbg/exec';
 const IS_GAS=(typeof google!=='undefined')&&google.script&&google.script.run;
 // 発送処理チップ：販売済を除く6個
 const SHIP_STATUSES=['在庫','検品済','保品','No有','出タイ待','出品'];
@@ -437,7 +449,7 @@ let masters={statuses:ALL_STATUSES,shippings:[],shops:[],makers:[],nameList:[]};
 let shipItem=null,shipStatus='';
 // ④⑤ 状態・保管バーコードを追加
 const CONDITION_LIST=['未使用','未使用に近い','目立ったキズや汚れナシ','目立ったキズや汚れアリ','キズや汚れアリ','全体に状態が悪い'];
-let bulkItems=[],bulkStatus='',bulkShop='',bulkNameId='',bulkNameLabel='',bulkCondition='',bulkStorageBarcode='';
+let bulkItems=[],bulkStatus='',bulkShop='',bulkNameId='',bulkNameLabel='',bulkCondition='',bulkStorageBarcode='',bulkStockCheck='';
 let scanMode='',popupTarget='';
 
 // ── GAS通信（JSONP方式・GASのcallback対応） ──
@@ -500,6 +512,12 @@ function selectPopupItem(val){
   closePopup();
 }
 function closePopup(){document.getElementById('popup-ov').classList.remove('open');}
+// ── 在庫確認チップ選択 ──
+function selectStockCheck(val){
+  bulkStockCheck=val;
+  document.getElementById('stock-chip-yes').classList.toggle('sel',val==='有');
+  document.getElementById('stock-chip-no').classList.toggle('sel',val==='無');
+}
 // ── 販売済ボタンタップ処理 ──
 function selectSold(){
   if(!shipItem)return;
@@ -775,6 +793,7 @@ function saveBulk(){
         if(bulkShop)p.店名=bulkShop;if(bulkNameId)p.商品名ID=bulkNameId;
         if(bulkCondition)p.状態=bulkCondition;
         if(bulkStorageBarcode)p.保管バーコード=bulkStorageBarcode;
+        if(bulkStockCheck)p.在庫確認=bulkStockCheck;
         return p;
       });
       gasCall('bulkUpdate',{items:items},
@@ -783,12 +802,15 @@ function saveBulk(){
     },null);
 }
 function clearBulk(){
-  bulkItems=[];bulkStatus='';bulkShop='';bulkNameId='';bulkNameLabel='';bulkCondition='';bulkStorageBarcode='';
+  bulkItems=[];bulkStatus='';bulkShop='';bulkNameId='';bulkNameLabel='';bulkCondition='';bulkStorageBarcode='';bulkStockCheck='';
   ['bulk-buy-date','bulk-buy-price'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('bulk-shop-val').textContent='選択してください';
   document.getElementById('bulk-name-val').textContent='選択してください';
   document.getElementById('bulk-condition-val').textContent='選択してください';
   document.getElementById('bulk-storage-val').textContent='';
+  // 在庫確認チップをリセット
+  document.getElementById('stock-chip-yes').classList.remove('sel');
+  document.getElementById('stock-chip-no').classList.remove('sel');
   renderBulkList();
 }
 // ── 初期化 ──
