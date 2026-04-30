@@ -173,10 +173,32 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 .detail-grid{display:grid;grid-template-columns:5.5rem 1fr;gap:.45rem .5rem;align-items:baseline;}
 .d-lbl{font-size:var(--fs-sm);font-weight:700;color:#00994a;white-space:nowrap;}
 .d-val{font-size:var(--fs-sm);font-weight:700;color:var(--text-dark);word-break:break-all;font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;}
+/* ── 発送作業 複数商品カード ── */
+.ship-card{background:var(--card-bg);border-radius:var(--r);margin-bottom:.6rem;box-shadow:0 1px 4px rgba(0,0,0,.12);overflow:hidden;}
+.ship-card-header{display:flex;align-items:flex-start;gap:.6rem;padding:.7rem .8rem;cursor:pointer;position:relative;}
+.ship-card-no{width:2.4rem;height:2.4rem;border-radius:50%;background:var(--blue-mid);color:#fff;font-size:var(--fs-xs);font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.1rem;}
+.ship-card-img{width:4.8rem;height:4.8rem;object-fit:cover;border-radius:.5rem;flex-shrink:0;}
+.ship-card-no-img{width:4.8rem;height:4.8rem;border-radius:.5rem;background:#e8eaf0;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;color:#90a4ae;}
+.ship-card-info{flex:1;min-width:0;}
+.ship-card-row{font-size:var(--fs-xs);color:var(--text-dark);line-height:1.6;word-break:break-all;}
+.ship-card-row span.lbl{color:#78909c;font-size:.72rem;margin-right:.3rem;}
+.ship-card-status{display:inline-block;padding:.1rem .5rem;border-radius:1rem;border:.12rem solid #cfd8dc;background:#f0f4f8;font-size:.7rem;font-weight:700;color:var(--text-mid);margin-left:.3rem;vertical-align:middle;}
+.ship-card-price{font-size:var(--fs-xs);color:#1565c0;font-weight:700;margin-top:.2rem;}
+.ship-card-del{position:absolute;top:.5rem;right:.5rem;width:2.2rem;height:2.2rem;border-radius:50%;background:#f44336;color:#fff;border:none;font-size:1rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
+/* 展開エリア */
+.ship-card-expand{display:none;padding:.5rem .8rem .8rem;border-top:.1rem solid #e0e0e0;background:#f8f9fa;}
+.ship-card-expand.open{display:block;}
+.ship-expand-price{margin-bottom:.5rem;}
+.ship-expand-price .edit-lbl{font-size:var(--fs-xs);}
+.ship-detail-btn{width:100%;padding:.6rem;border-radius:var(--r);border:.15rem solid var(--blue-mid);background:#fff;color:var(--blue-mid);font-size:var(--fs-sm);font-weight:700;cursor:pointer;margin-top:.3rem;}
+.ship-detail-area{margin-top:.5rem;background:#fff;border-radius:var(--r);padding:.6rem .8rem;display:none;}
+.ship-detail-area.open{display:block;}
+.ship-detail-grid{display:grid;grid-template-columns:5rem 1fr;gap:.3rem .4rem;}
+.ship-d-lbl{font-size:.72rem;font-weight:700;color:#00994a;}
+.ship-d-val{font-size:.72rem;font-weight:700;color:var(--text-dark);word-break:break-all;}
 /* ── 空状態 ── */
 #ship-empty{text-align:center;padding:2.5rem 1rem;color:rgba(255,255,255,.7);font-size:var(--fs-md);line-height:1.8;}
 #ship-empty .empty-icon{font-size:4rem;margin-bottom:1rem;}
-/* ── 一括編集 ── */
 .bulk-item{background:var(--card-bg);border-radius:var(--r);padding:1rem 1rem;margin-bottom:.5rem;display:flex;align-items:flex-start;gap:.8rem;box-shadow:0 1px 4px rgba(0,0,0,.1);min-height:6.5rem;}
 .bulk-item-no{width:2.4rem;height:2.4rem;border-radius:50%;background:var(--blue-mid);color:#fff;font-size:var(--fs-xs);font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.2rem;}
 .bulk-item-info{flex:1;min-width:0;}
@@ -253,7 +275,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 </div>
 
 <!-- ════════════════════════════════
-     TAB1: 発送作業
+     TAB1: 発送作業（複数商品一括処理）
 ════════════════════════════════ -->
 <div class="screen active" id="screen-ship">
   <div class="page-title">🚚 発送作業</div>
@@ -266,11 +288,14 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
         <button class="big-btn btn-scan" onclick="startScan('ship')">📷<br>スキャン</button>
       </div>
       <div class="search-right">
-        <input type="text" class="inp" id="search-input" placeholder="バーコード / 商品NO" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" ___skip___ oninput="this.value=this.value.replace(/[^A-Za-z0-9\-]/g,'').toUpperCase()" onkeydown="if(event.key==='Enter'){searchManual()}">
-        <button class="big-btn btn-search" onclick="searchManual()">🔍 検索</button>
+        <input type="text" class="inp" id="search-input" placeholder="バーコード / 商品NO" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" oninput="this.value=this.value.replace(/[^A-Za-z0-9\-]/g,'').toUpperCase()" onkeydown="if(event.key==='Enter'){searchManual()}">
+        <button class="big-btn btn-search" onclick="searchManual()">🔍 追加</button>
       </div>
     </div>
   </div>
+
+  <!-- 件数表示 -->
+  <div class="bulk-count" id="ship-count">0件 追加済み</div>
 
   <!-- 空状態 -->
   <div id="ship-empty">
@@ -278,78 +303,23 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
     バーコードをスキャンまたは<br>商品NOを入力して検索してください
   </div>
 
-  <!-- 商品詳細（スキャン後表示） -->
-  <div id="ship-detail" style="display:none">
+  <!-- 商品カードリスト -->
+  <div id="ship-list"></div>
 
-    <!-- B: 商品情報ブロック（黄） -->
-    <div class="block-card card-orange">
-      <span class="block-title bt-orange">📦 商品情報</span>
-      <div class="product-layout">
-        <!-- 左列：画像（拡大） -->
-        <div class="product-img-col">
-          <img id="ship-img" class="product-img" src="" alt="商品画像" style="display:none">
-          <div id="ship-no-img" class="no-img">🖼️<span>画像なし</span></div>
-        </div>
-        <!-- 右列：縦一直線 -->
-        <div class="product-info-col">
-          <div class="info-row"><span class="info-lbl">BC</span><span class="info-val" id="ship-barcode">-</span></div>
-          <div class="info-row"><span class="info-lbl">商品NO</span><span class="info-val" id="ship-no">-</span></div>
-          <div class="info-row"><span class="info-lbl">保管BC</span><span class="info-val" id="ship-bc-storage">-</span></div>
-          <div class="info-row"><span class="info-lbl">商品名</span><span class="info-val" id="ship-name">-</span></div>
-          <div class="info-row"><span class="info-lbl">発送手段</span><span class="info-val" id="ship-method">-</span></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- C: 発送処理ブロック（青） -->
-    <div class="block-card card-blue">
+  <!-- 発送処理フォーム（1件以上で表示） -->
+  <div id="ship-form" style="display:none">
+    <!-- 販売済日 -->
+    <div class="block-card card-blue" style="margin-top:.5rem">
       <span class="block-title bt-blue">🚚 発送処理</span>
-      <!-- ステータス行（1行） -->
-      <div class="c-row">
-        <span class="c-lbl">ステータス</span>
-        <div class="c-val">
-          <!-- 販売済ボタン：常に「販売済」固定テキスト・タップでステータス変更 -->
-          <div class="cur-status-btn" id="ship-cur-status" onclick="selectSold()">販売済</div>
-        </div>
-      </div>
-      <!-- 変更チップ（販売済を除く6個） -->
-      <div class="chip-grp" id="ship-status-chips"></div>
-      <div class="divider"></div>
-      <!-- 販売済日（1行） -->
       <div class="edit-row">
         <span class="edit-lbl">📅 販売済日</span>
         <input type="date" class="edit-inp" id="ship-sold-date">
       </div>
-      <!-- 販売金額（1行・¥付き） -->
-      <div class="edit-row">
-        <span class="edit-lbl">💴 販売金額</span>
-        <div class="price-wrap">
-          <span class="price-prefix">¥</span>
-          <input type="text" inputmode="numeric" class="price-inp" id="ship-sell-price" placeholder="0">
-        </div>
-      </div>
     </div>
-
-    <!-- D: 詳細情報ブロック（オレンジ） -->
-    <div class="block-card card-green">
-      <span class="block-title bt-green">📋 詳細情報</span>
-      <div class="detail-grid">
-        <!-- ⑫ 最上段：状態（表示のみ） -->
-        <span class="d-lbl">状態</span>    <span class="d-val" id="ship-condition">-</span>
-        <span class="d-lbl">メーカー</span><span class="d-val" id="ship-maker">-</span>
-        <span class="d-lbl">カラー</span>  <span class="d-val" id="ship-color">-</span>
-        <span class="d-lbl">サイズ</span>  <span class="d-val" id="ship-size">-</span>
-        <span class="d-lbl">備考</span>    <span class="d-val" id="ship-note">-</span>
-        <span class="d-lbl">購入金額</span><span class="d-val" id="ship-buy-price">-</span>
-        <!-- ⑬ 最下段：購入日 -->
-        <span class="d-lbl">購入日</span>  <span class="d-val" id="ship-buy-date">-</span>
-      </div>
-    </div>
-
     <!-- 保存・クリアボタン -->
     <div class="btn-row" style="margin-bottom:1rem">
-      <button class="big-btn btn-save"  onclick="saveShipping()">💾 保存</button>
-      <button class="big-btn btn-clear" onclick="clearShip()">🗑 クリア</button>
+      <button class="big-btn btn-save"  onclick="saveShipping()">💾 一括保存</button>
+      <button class="big-btn btn-clear" onclick="clearShip()">🗑 全クリア</button>
     </div>
   </div>
 </div>
@@ -446,7 +416,7 @@ const SHIP_STATUSES=['在庫','検品済','保品','No有','出タイ待','出�
 const ALL_STATUSES=['在庫','検品済','保品','No有','出タイ待','出品','販売済'];
 
 let masters={statuses:ALL_STATUSES,shippings:[],shops:[],makers:[],nameList:[]};
-let shipItem=null,shipStatus='';
+let shipItem=null,shipStatus='';// 後方互換用（bulkUpdateで流用）
 // ④⑤ 状態・保管バーコードを追加
 const CONDITION_LIST=['未使用','未使用に近い','目立ったキズや汚れナシ','目立ったキズや汚れアリ','キズや汚れアリ','全体に状態が悪い'];
 let bulkItems=[],bulkStatus='',bulkShop='',bulkNameId='',bulkNameLabel='',bulkCondition='',bulkStorageBarcode='',bulkStockCheck='';
@@ -689,105 +659,158 @@ function fetchProduct(keyword,mode){
   // barcode・keyword 両方渡す（GAS側はどちらでも検索可能）
   gasCall('getProductByBarcode',{barcode:keyword,keyword:keyword},res=>{
     hideLoad();
-    if(res&&res.found){if(mode==='ship')showShipDetail(res.item);else addBulkItem(res.item);}
+    if(res&&res.found){if(mode==='ship')addShipItem(res.item);else addBulkItem(res.item);}
     else showToast('⚠️ 未登録のバーコード / 商品NOです','err');
   },()=>{hideLoad();showToast('⚠️ 通信エラー','err');});
 }
-// ── TAB1 発送作業 ──
-function showShipDetail(item){
-  shipItem=item;
-  shipStatus=item.ステータス||'';
-  document.getElementById('ship-empty').style.display='none';
-  document.getElementById('ship-detail').style.display='block';
+// ── TAB1 発送作業（複数商品一括処理） ──
+let shipItems=[];// 複数商品配列
+let shipSellPrices={};// 各商品の販売金額 {識別ID: 金額}
 
-  // ⑤ 画像表示（JS側で一元管理）
-  const _img=document.getElementById('ship-img');
-  const _noImg=document.getElementById('ship-no-img');
-  _img.onload=null;_img.onerror=null;_img.src='';
-  if(item.imgUrl){
-    const _m=item.imgUrl.match(/[?&]id=([^&]+)/);
-    if(_m){
-      const _fid=_m[1];
-      let _retried=false;
-      _img.onload=function(){_img.style.display='block';_noImg.style.display='none';};
-      _img.onerror=function(){
-        if(!_retried){
-          _retried=true;
-          _img.onerror=function(){_img.style.display='none';_noImg.style.display='flex';};
-          _img.src='https://lh3.googleusercontent.com/d/'+_fid+'=w400';
-        }
-      };
-      _noImg.style.display='flex';_img.style.display='none';
-      _img.src='https://drive.google.com/thumbnail?id='+_fid+'&sz=w400';
-    }else{_img.style.display='none';_noImg.style.display='flex';}
-  }else{_img.style.display='none';_noImg.style.display='flex';}
+function addShipItem(item){
+  if(shipItems.find(s=>s.識別ID===item.識別ID)){showToast('⚠️ すでに追加済みです','err');return;}
+  shipItems.push(item);
+  shipSellPrices[item.識別ID]=0;
+  renderShipList();
+  showToast('✅ '+(item.商品名||item.バーコード)+' を追加');
+}
 
-  // B: 商品情報
-  setText('ship-barcode',item.バーコード);
-  setText('ship-no',item.商品NO);
-  setText('ship-bc-storage',item.保管バーコード);
-  setText('ship-name',item.商品名);
-  setText('ship-method',item.発送手段);
+function removeShipItem(idx){
+  const item=shipItems[idx];
+  if(item)delete shipSellPrices[item.識別ID];
+  shipItems.splice(idx,1);
+  renderShipList();
+}
 
-  // C: 販売済ボタン：テキストは常に「販売済」固定
-  // 現在値が「販売済」→青点灯、それ以外→グレー消灯
-  const _curBtn=document.getElementById('ship-cur-status');
-  if(item.ステータス==='販売済'){
-    _curBtn.classList.add('sold');
-  }else{
-    _curBtn.classList.remove('sold');
-  }
+function toggleShipCard(idx){
+  const el=document.getElementById('ship-expand-'+idx);
+  if(el)el.classList.toggle('open');
+}
 
-  // ① 状態：スプレッドシートの値を直接表示
-  const _condEl=document.getElementById('ship-condition');
-  if(_condEl)_condEl.textContent=String(item.状態||'').trim()||'-';
+function toggleShipDetail(idx){
+  const el=document.getElementById('ship-detail-area-'+idx);
+  const btn=document.getElementById('ship-detail-btn-'+idx);
+  if(!el)return;
+  const isOpen=el.classList.toggle('open');
+  if(btn)btn.textContent=isOpen?'📋 詳細情報 ▲':'📋 詳細情報 ▼';
+}
 
-  setText('ship-maker',item.メーカー);
-  setText('ship-color',item.カラー);
-  setText('ship-size',item.サイズ数量);
-  setText('ship-note',item.備考);
-  setText('ship-buy-price',item.購入金額?'¥'+Number(item.購入金額).toLocaleString():'-');
-  setText('ship-buy-date',item.購入日);
+function updateShipPrice(idx,val){
+  const item=shipItems[idx];
+  if(!item)return;
+  const num=Number(val.replace(/[^0-9]/g,''))||0;
+  shipSellPrices[item.識別ID]=num;
+  // サブテキストの販売金額表示更新
+  const priceEl=document.getElementById('ship-card-price-'+idx);
+  if(priceEl)priceEl.textContent=num>0?'💴 ¥'+num.toLocaleString():'';
+}
 
-  // 販売済日デフォルト：今日
-  const t=new Date();
-  document.getElementById('ship-sold-date').value=
-    t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
-  document.getElementById('ship-sell-price').value=item.販売金額?String(item.販売金額):'';
+function renderShipList(){
+  const listEl=document.getElementById('ship-list');
+  const count=shipItems.length;
+  document.getElementById('ship-count').textContent=count+'件 追加済み';
+  document.getElementById('ship-empty').style.display=count===0?'block':'none';
+  document.getElementById('ship-form').style.display=count>0?'block':'none';
+  listEl.innerHTML='';
 
-  // ③ ステータスチップ（6個固定・並び順変更不可）
-  // 現在値と一致するチップ1個のみハイライト
-  // 販売済の場合は6個に含まれないため何もハイライトしない
-  // チップタップ時：shipStatusを更新・販売済ボタンはグレーに戻す
-  buildStatusChips('ship-status-chips',SHIP_STATUSES,()=>shipStatus,s=>{
-    shipStatus=s;
-    // チップ選択→販売済ボタンをグレー消灯に戻す
-    document.getElementById('ship-cur-status').classList.remove('sold');
+  shipItems.forEach((item,idx)=>{
+    const card=document.createElement('div');
+    card.className='ship-card';
+
+    // 画像HTML
+    const imgHtml=item.imgUrl
+      ?`<img class="ship-card-img" src="${item.imgUrl}" alt="商品画像" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" onload="this.style.display='block';this.nextElementSibling.style.display='none'"><div class="ship-card-no-img" style="display:none">🖼️</div>`
+      :`<div class="ship-card-no-img">🖼️</div>`;
+
+    // ステータスチップ（現在値1個表示）
+    const statusChip=item.ステータス?`<span class="ship-card-status">${item.ステータス}</span>`:'';
+
+    // 販売金額サブテキスト（0以上の場合のみ）
+    const curPrice=shipSellPrices[item.識別ID]||0;
+    const priceSubText=curPrice>0?`<div class="ship-card-price" id="ship-card-price-${idx}">💴 ¥${curPrice.toLocaleString()}</div>`
+      :`<div class="ship-card-price" id="ship-card-price-${idx}"></div>`;
+
+    card.innerHTML=`
+      <div class="ship-card-header" onclick="toggleShipCard(${idx})">
+        <div class="ship-card-no">${idx+1}</div>
+        ${imgHtml}
+        <div class="ship-card-info">
+          <div class="ship-card-row"><span class="lbl">BC</span>${item.バーコード||'-'}${statusChip}</div>
+          <div class="ship-card-row"><span class="lbl">商品NO</span>${item.商品NO||'-'}</div>
+          <div class="ship-card-row"><span class="lbl">保管BC</span>${item.保管バーコード||'-'}</div>
+          <div class="ship-card-row"><span class="lbl">商品名</span>${item.商品名||'-'}</div>
+          <div class="ship-card-row"><span class="lbl">発送法</span>${item.発送手段||'-'}</div>
+          ${priceSubText}
+        </div>
+        <button class="ship-card-del" onclick="event.stopPropagation();removeShipItem(${idx})">✕</button>
+      </div>
+      <div class="ship-card-expand" id="ship-expand-${idx}">
+        <div class="ship-expand-price">
+          <div class="edit-row">
+            <span class="edit-lbl">💴 販売金額</span>
+            <div class="price-wrap">
+              <span class="price-prefix">¥</span>
+              <input type="text" inputmode="numeric" class="price-inp"
+                value="${curPrice>0?curPrice:''}"
+                placeholder="0"
+                oninput="updateShipPrice(${idx},this.value)">
+            </div>
+          </div>
+        </div>
+        <button class="ship-detail-btn" id="ship-detail-btn-${idx}" onclick="toggleShipDetail(${idx})">📋 詳細情報 ▼</button>
+        <div class="ship-detail-area" id="ship-detail-area-${idx}">
+          <div class="ship-detail-grid">
+            <span class="ship-d-lbl">状態</span><span class="ship-d-val">${item.状態||'-'}</span>
+            <span class="ship-d-lbl">メーカー</span><span class="ship-d-val">${item.メーカー||'-'}</span>
+            <span class="ship-d-lbl">カラー</span><span class="ship-d-val">${item.カラー||'-'}</span>
+            <span class="ship-d-lbl">サイズ</span><span class="ship-d-val">${item.サイズ数量||'-'}</span>
+            <span class="ship-d-lbl">備考</span><span class="ship-d-val">${item.備考||'-'}</span>
+            <span class="ship-d-lbl">購入金額</span><span class="ship-d-val">${item.購入金額?'¥'+Number(item.購入金額).toLocaleString():'-'}</span>
+            <span class="ship-d-lbl">購入日</span><span class="ship-d-val">${item.購入日||'-'}</span>
+          </div>
+        </div>
+      </div>`;
+    listEl.appendChild(card);
   });
 }
+
 function saveShipping(){
-  if(!shipItem){showToast('⚠️ 商品をスキャンしてください','err');return;}
-  if(!shipStatus){showToast('⚠️ ステータスを選択してください','err');return;}
+  if(shipItems.length===0){showToast('⚠️ 商品を追加してください','err');return;}
   const soldDate=document.getElementById('ship-sold-date').value;
   if(!soldDate){showToast('⚠️ 販売済日を入力してください','err');return;}
-  // ② 販売金額が空 or 0 の場合はエラー
-  const sellPriceRaw=document.getElementById('ship-sell-price').value.replace(/[^0-9]/g,'');
-  if(!sellPriceRaw||Number(sellPriceRaw)===0){showToast('⚠️ 販売金額を入力してください','err');return;}
-  const sellPrice=Number(sellPriceRaw);
-  showDialog('発送処理を保存',
-    '商品NO: '+shipItem.商品NO+'\n変更前: '+shipItem.ステータス+' → 変更後: '+shipStatus+'\n発送日: '+soldDate.replace(/-/g,'/')+'\n\n保存しますか？',
+
+  // 確認ダイアログ
+  const summary=shipItems.map((item,i)=>{
+    const p=shipSellPrices[item.識別ID]||0;
+    return `${i+1}. ${item.商品名||item.バーコード} ¥${p.toLocaleString()}`;
+  }).join('\n');
+
+  showDialog('一括発送保存（販売済）',
+    `${shipItems.length}件を販売済に変更します\n\n${summary}\n\n販売済日: ${soldDate.replace(/-/g,'/')}\n\n保存しますか？`,
     ()=>{
       showLoad('保存中...');
-      gasCall('updateShipping',{rowIndex:shipItem.rowIndex,ステータス:shipStatus,販売済日:soldDate.replace(/-/g,'/'),販売金額:sellPrice},
-        res=>{hideLoad();if(res&&res.ok){showToast('✅ 保存しました');clearShip();}else showToast('⚠️ 保存に失敗しました','err');},
+      const items=shipItems.map(item=>({
+        rowIndex:item.rowIndex,
+        ステータス:'販売済',
+        販売済日:soldDate.replace(/-/g,'/'),
+        販売金額:shipSellPrices[item.識別ID]||0
+      }));
+      gasCall('bulkUpdate',{items:items},
+        res=>{
+          hideLoad();
+          if(res&&res.ok){
+            showToast('✅ '+items.length+'件 保存しました');
+            clearShip();
+          }else showToast('⚠️ 保存に失敗しました','err');
+        },
         ()=>{hideLoad();showToast('⚠️ 通信エラー','err');});
     },null);
 }
+
 function clearShip(){
-  shipItem=null;shipStatus='';
-  document.getElementById('ship-empty').style.display='block';
-  document.getElementById('ship-detail').style.display='none';
+  shipItems=[];shipSellPrices={};
   document.getElementById('search-input').value='';
+  renderShipList();
 }
 // ── TAB2 一括編集 ──
 function addBulkItem(item){
@@ -853,6 +876,12 @@ function clearBulk(){
 // ── 初期化 ──
 function loadMasters(){
   showLoad('データ読み込み中...');
+  // 販売済日デフォルト：今日
+  const t=new Date();
+  const today=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+  document.getElementById('ship-sold-date').value=today;
+  // 発送リスト初期化
+  renderShipList();
   gasCall('getMasters',{},res=>{
     hideLoad();if(res&&res.ok)masters=res;
     buildStatusChips('ship-status-chips',SHIP_STATUSES,()=>shipStatus,s=>{shipStatus=s;});
