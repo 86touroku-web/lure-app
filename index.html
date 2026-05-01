@@ -8,7 +8,7 @@
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;}
 input,select,textarea,button{font-family:inherit;-webkit-appearance:none;appearance:none;}
-html{font-size:62.5%;overscroll-behavior:none;-webkit-text-size-adjust:100%;}
+html{font-size:72%;overscroll-behavior:none;-webkit-text-size-adjust:100%;}
 body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size:1.4rem;background:linear-gradient(135deg,#1a6b3c 0%,#0d4f8c 100%);width:100%;height:100dvh;overflow:hidden;position:relative;-webkit-font-smoothing:antialiased;}
 *::-webkit-scrollbar{display:none;}
 :root{
@@ -16,8 +16,8 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
   --yellow:#ffd740;--red:#f44336;--orange:#ff9800;
   --card-bg:rgba(255,255,255,0.96);--card-bg2:rgba(255,255,255,0.15);
   --text-dark:#1a1a2e;--text-mid:#37474f;
-  --tab-h:7rem;--h-inp:4.4rem;--h-btn:4.8rem;--r:.8rem;
-  --fs-xs:1.1rem;--fs-sm:1.25rem;--fs-md:1.4rem;--fs-lg:1.7rem;
+  --tab-h:7rem;--h-inp:4.8rem;--h-btn:5.2rem;--r:.8rem;
+  --fs-xs:1.25rem;--fs-sm:1.45rem;--fs-md:1.6rem;--fs-lg:1.9rem;
   --hdr-red:#e53935;--hdr-orange:#e65100;--hdr-blue:#1565c0;--hdr-green:#00F562;
   --bg-red:#ffd6d6;--bg-orange:#ffd9b3;--bg-blue:#c2d9ff;--bg-green:#b3ffda;
 }
@@ -173,30 +173,33 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 .detail-grid{display:grid;grid-template-columns:5.5rem 1fr;gap:.45rem .5rem;align-items:baseline;}
 .d-lbl{font-size:var(--fs-sm);font-weight:700;color:#00994a;white-space:nowrap;}
 .d-val{font-size:var(--fs-sm);font-weight:700;color:var(--text-dark);word-break:break-all;font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;}
-/* ── 発送作業 複数商品カード ── */
+/* ── 発送作業・一括編集 共通商品カード ── */
 .ship-card{background:var(--card-bg);border-radius:var(--r);margin-bottom:.6rem;box-shadow:0 1px 4px rgba(0,0,0,.12);overflow:hidden;}
 .ship-card-header{display:flex;align-items:flex-start;gap:.8rem;padding:1rem 1rem;cursor:pointer;position:relative;}
 .ship-card-no{width:2.4rem;height:2.4rem;border-radius:50%;background:var(--blue-mid);color:#fff;font-size:var(--fs-xs);font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.2rem;}
-/* 画像サイズをbulk-itemと統一（6.5rem） */
-.ship-card-img{width:6.5rem;height:6.5rem;object-fit:cover;border-radius:.5rem;flex-shrink:0;}
-.ship-card-no-img{width:6.5rem;height:6.5rem;border-radius:.5rem;background:#e8eaf0;display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0;color:#90a4ae;}
+/* Ⅲ 画像高さを発送法まで拡大（auto・min-height指定） */
+.ship-card-img{width:6.5rem;min-height:8.5rem;object-fit:cover;border-radius:.5rem;flex-shrink:0;align-self:stretch;}
+.ship-card-no-img{width:6.5rem;min-height:8.5rem;border-radius:.5rem;background:#e8eaf0;display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0;color:#90a4ae;}
 .ship-card-info{flex:1;min-width:0;}
-/* フォントサイズをbulk-item-subと統一（var(--fs-sm)） */
-.ship-card-row{font-size:var(--fs-sm);color:#37474f;line-height:1.6;word-break:break-all;}
-.ship-card-row span.lbl{color:#78909c;font-size:var(--fs-xs);margin-right:.3rem;}
+.ship-card-row{font-size:var(--fs-sm);color:#37474f;line-height:1.7;word-break:break-all;display:flex;align-items:baseline;gap:.3rem;}
+/* Ⅳ 見出し横幅を固定（2行にならないよう） */
+.ship-card-row span.lbl{color:#78909c;font-size:var(--fs-xs);flex-shrink:0;width:4.2rem;min-width:4.2rem;}
+/* Ⅱ BCとステータスチップの間にスペース */
+.ship-card-bc{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;}
 .ship-card-price{font-size:var(--fs-sm);color:#1565c0;font-weight:700;margin-top:.2rem;}
-.ship-card-del{position:absolute;top:.5rem;right:.5rem;width:2.2rem;height:2.2rem;border-radius:50%;background:#f44336;color:#fff;border:none;font-size:1rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
+.ship-card-del{position:absolute;top:.5rem;right:.5rem;width:2.2rem;height:2.2rem;border-radius:50%;background:#f44336;color:#fff;border:none;font-size:1rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;z-index:2;}
 /* 展開エリア */
 .ship-card-expand{display:none;padding:.5rem .8rem .8rem;border-top:.1rem solid #e0e0e0;background:#f8f9fa;}
 .ship-card-expand.open{display:block;}
 .ship-expand-price{margin-bottom:.5rem;}
 .ship-expand-price .edit-lbl{font-size:var(--fs-sm);}
-.ship-detail-btn{width:100%;padding:.6rem;border-radius:var(--r);border:.15rem solid var(--blue-mid);background:#fff;color:var(--blue-mid);font-size:var(--fs-sm);font-weight:700;cursor:pointer;margin-top:.3rem;}
+/* Ⅰ 詳細情報ボタンを発送処理ボタンと同じ配色（青） */
+.ship-detail-btn{width:100%;padding:.6rem;border-radius:var(--r);border:none;background:var(--blue-mid);color:#fff;font-size:var(--fs-sm);font-weight:700;cursor:pointer;margin-top:.3rem;}
 .ship-detail-area{margin-top:.5rem;background:#fff;border-radius:var(--r);padding:.6rem .8rem;display:none;}
 .ship-detail-area.open{display:block;}
-.ship-detail-grid{display:grid;grid-template-columns:5rem 1fr;gap:.3rem .4rem;}
-/* 詳細情報フォントを商品情報と同じサイズに統一 */
-.ship-d-lbl{font-size:var(--fs-sm);font-weight:700;color:#00994a;}
+/* Ⅳ 詳細情報グリッド：見出し幅を広く設定 */
+.ship-detail-grid{display:grid;grid-template-columns:5.5rem 1fr;gap:.35rem .4rem;}
+.ship-d-lbl{font-size:var(--fs-sm);font-weight:700;color:#00994a;white-space:nowrap;}
 .ship-d-val{font-size:var(--fs-sm);font-weight:700;color:var(--text-dark);word-break:break-all;}
 
 /* ── ステータスチップ色（発送作業・一括編集共通） ── */
@@ -233,14 +236,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 /* ── 空状態 ── */
 #ship-empty{text-align:center;padding:2.5rem 1rem;color:rgba(255,255,255,.7);font-size:var(--fs-md);line-height:1.8;}
 #ship-empty .empty-icon{font-size:4rem;margin-bottom:1rem;}
-.bulk-item{background:var(--card-bg);border-radius:var(--r);padding:1rem 1rem;margin-bottom:.5rem;display:flex;align-items:flex-start;gap:.8rem;box-shadow:0 1px 4px rgba(0,0,0,.1);min-height:6.5rem;}
-.bulk-item-no{width:2.4rem;height:2.4rem;border-radius:50%;background:var(--blue-mid);color:#fff;font-size:var(--fs-xs);font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.2rem;}
-.bulk-item-info{flex:1;min-width:0;}
-.bulk-item-name{font-size:var(--fs-sm);font-weight:700;color:var(--text-dark);word-break:break-all;line-height:1.3;}
-.bulk-item-sub{font-size:var(--fs-sm);color:#37474f;margin-top:.35rem;line-height:1.6;word-break:break-all;white-space:normal;}
-.bulk-item-sub-ship{font-size:var(--fs-sm);color:#37474f;margin-top:.25rem;line-height:1.5;}
-.bulk-item-sub-cond{font-size:var(--fs-sm);color:#37474f;margin-top:.25rem;line-height:1.5;}
-.bulk-item-del{width:3rem;height:3rem;border-radius:50%;background:var(--red);color:#fff;border:none;cursor:pointer;font-size:1.6rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+/* ── 一括編集フォーム ── */
 .bulk-count{text-align:center;font-size:var(--fs-sm);font-weight:700;color:rgba(255,255,255,.8);margin-bottom:.6rem;}
 .bulk-form-section{background:var(--card-bg2);border-radius:1.2rem;padding:1rem;margin-bottom:.8rem;border:.1rem solid rgba(255,255,255,.2);}
 .bulk-form-title{font-size:var(--fs-sm);font-weight:800;color:#fff;margin-bottom:.6rem;}
@@ -442,67 +438,41 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 </div>
 
 <script>
-const GAS_URL='https://script.google.com/macros/s/AKfycby6p55HR75SxwBULn5jR2ongX1Fp82vm2SP-t09rsHUH1qtjkJyBMaXx-YiPicqKM285g/exec';
-const IS_GAS=(typeof google!=='undefined')&&google.script&&google.script.run;
+// GitHub Pages直接アクセス用GAS URL
+const GAS_URL='https://script.google.com/macros/s/AKfycbwszCwfSETnzE2RvEMb2qXCPPuqgD8Ybu6efEw6t714REwHQVJtEE-Qu7WeWZx-oGZ12w/exec';
 // 発送処理チップ：販売済を除く6個
 const SHIP_STATUSES=['在庫','検品済','保品','No有','出タイ待','出品'];
 // 一括編集チップ：全7個
 const ALL_STATUSES=['在庫','検品済','保品','No有','出タイ待','出品','販売済'];
 
 let masters={statuses:ALL_STATUSES,shippings:[],shops:[],makers:[],nameList:[]};
-let shipItem=null,shipStatus='';// 後方互換用（bulkUpdateで流用）
-// ④⑤ 状態・保管バーコードを追加
+let shipItem=null,shipStatus='';
 const CONDITION_LIST=['未使用','未使用に近い','目立ったキズや汚れナシ','目立ったキズや汚れアリ','キズや汚れアリ','全体に状態が悪い'];
 let bulkItems=[],bulkStatus='',bulkShop='',bulkNameId='',bulkNameLabel='',bulkCondition='',bulkStorageBarcode='',bulkStockCheck='';
 let scanMode='',popupTarget='';
 
-// ── GAS通信（JSONP方式・GASのcallback対応） ──
-// bulkUpdateのみPOST方式（URL長制限回避）
+// ── GAS通信（JSONP方式・GitHub Pages直接アクセス用） ──
 function gasCall(fn,payload,ok,ng){
-  if(IS_GAS){google.script.run.withSuccessHandler(r=>{if(ok)ok(r);}).withFailureHandler(e=>{if(ng)ng(e);else showToast('⚠️ 通信エラー','err');})[fn](payload);return;}
-
-  // bulkUpdateはデータ量が多いためPOSTで送信
-  if(fn==='bulkUpdate'){
-    const ctrl=new AbortController();
-    const timer=setTimeout(()=>{ctrl.abort();if(ng)ng(new Error('timeout'));else showToast('⚠️ 通信タイムアウト','err');},20000);
-    const body=new FormData();
-    body.append('fn',fn);
-    body.append('payload',JSON.stringify(payload));
-    fetch(GAS_URL,{method:'POST',body:body,signal:ctrl.signal})
-      .then(r=>{
-        clearTimeout(timer);
-        if(!r.ok)throw new Error('HTTP '+r.status);
-        // レスポンス解析を試みる。失敗してもGAS側は書き込み済みのため成功扱い
-        return r.text().then(t=>{
-          try{return JSON.parse(t);}
-          catch(_){return {ok:true,updated:payload.items?payload.items.length:1};}
-        });
-      })
-      .then(r=>{if(ok)ok(r);})
-      .catch(e=>{
-        clearTimeout(timer);
-        if(e.name==='AbortError')return;
-        // HTTP 200以外のエラーの場合のみng呼び出し
-        // LINE WebViewのCORSブロックでも送信自体は成功している場合が多いため成功扱い
-        if(e.message&&e.message.startsWith('HTTP')){
-          if(ng)ng(e);else showToast('⚠️ 通信エラー','err');
-        }else{
-          // fetchは成功・レスポンス解析失敗→GAS書き込み済みとして成功扱い
-          if(ok)ok({ok:true,updated:payload.items?payload.items.length:1});
-        }
-      });
-    return;
-  }
-
-  // その他はJSONP方式
   const cbName='_gasCallback_'+Date.now();
   const script=document.createElement('script');
   let done=false;
-  const timer=setTimeout(()=>{if(!done){done=true;cleanup();if(ng)ng(new Error('timeout'));else showToast('⚠️ 通信タイムアウト','err');}},15000);
-  function cleanup(){delete window[cbName];if(script.parentNode)script.parentNode.removeChild(script);clearTimeout(timer);}
+  const timer=setTimeout(()=>{
+    if(!done){done=true;cleanup();
+      if(ng)ng(new Error('timeout'));else showToast('⚠️ 通信タイムアウト','err');}
+  },15000);
+  function cleanup(){
+    delete window[cbName];
+    if(script.parentNode)script.parentNode.removeChild(script);
+    clearTimeout(timer);
+  }
   window[cbName]=function(r){if(done)return;done=true;cleanup();if(ok)ok(r);};
-  script.onerror=function(){if(done)return;done=true;cleanup();if(ng)ng(new Error('script error'));else showToast('⚠️ 通信エラー','err');};
-  script.src=GAS_URL+'?fn='+encodeURIComponent(fn)+'&payload='+encodeURIComponent(JSON.stringify(payload))+'&callback='+cbName;
+  script.onerror=function(){
+    if(done)return;done=true;cleanup();
+    if(ng)ng(new Error('script error'));else showToast('⚠️ 通信エラー','err');
+  };
+  script.src=GAS_URL+'?fn='+encodeURIComponent(fn)
+    +'&payload='+encodeURIComponent(JSON.stringify(payload))
+    +'&callback='+cbName;
   document.head.appendChild(script);
 }
 // ── UI共通 ──
@@ -700,9 +670,92 @@ function fetchProduct(keyword,mode){
     else showToast('⚠️ 未登録のバーコード / 商品NOです','err');
   },()=>{hideLoad();showToast('⚠️ 通信エラー','err');});
 }
+// ══════════════════════════════════════════════
+//  共通：商品情報カードHTML生成
+//  mode='ship'→販売金額入力あり
+//  mode='bulk'→販売金額入力なし・削除ボタンスタイル異なる
+// ══════════════════════════════════════════════
+function buildItemCardHTML(item, idx, mode){
+  // 画像HTML
+  const imgHtml = item.imgUrl
+    ? `<img class="ship-card-img" src="${item.imgUrl}" alt="商品画像"
+         onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+         onload="this.style.display='block';this.nextElementSibling.style.display='none'">
+       <div class="ship-card-no-img" style="display:none">🖼️</div>`
+    : `<div class="ship-card-no-img">🖼️</div>`;
+
+  // Ⅱ BCとステータスチップの間にスペース1文字分
+  const statusChip = item.ステータス
+    ? `<span class="ship-card-status" data-st="${item.ステータス}">${item.ステータス}</span>` : '';
+
+  // トグル関数名（発送・一括で別々）
+  const toggleFn   = mode==='ship' ? `toggleShipCard(${idx})`   : `toggleBulkCard(${idx})`;
+  const detailFn   = mode==='ship' ? `toggleShipDetail(${idx})` : `toggleBulkDetail(${idx})`;
+  const expandId   = mode==='ship' ? `ship-expand-${idx}`       : `bulk-expand-${idx}`;
+  const detailBtnId= mode==='ship' ? `ship-detail-btn-${idx}`   : `bulk-detail-btn-${idx}`;
+  const detailAreaId=mode==='ship' ? `ship-detail-area-${idx}`  : `bulk-detail-area-${idx}`;
+  const delFn      = mode==='ship'
+    ? `event.stopPropagation();removeShipItem(${idx})`
+    : `event.stopPropagation();removeBulkItem(${idx})`;
+
+  // 販売金額行（発送作業のみ）
+  const curPrice = mode==='ship' ? (shipSellPrices[item.識別ID]||0) : 0;
+  const priceRow = mode==='ship'
+    ? `<div class="ship-card-price" id="ship-card-price-${idx}">${curPrice>0?'💴 ¥'+curPrice.toLocaleString():''}</div>`
+    : '';
+
+  // 展開内：販売金額入力（発送作業のみ）
+  const priceInput = mode==='ship'
+    ? `<div class="ship-expand-price">
+        <div class="edit-row">
+          <span class="edit-lbl">💴 販売金額</span>
+          <div class="price-wrap">
+            <span class="price-prefix">¥</span>
+            <input type="text" inputmode="numeric" class="price-inp"
+              value="${curPrice>0?curPrice:''}" placeholder="0"
+              oninput="updateShipPrice(${idx},this.value)">
+          </div>
+        </div>
+      </div>` : '';
+
+  // Ⅴ 詳細情報から「状態」を削除（カード本体に表示）
+  return `
+    <div class="ship-card-header" onclick="${toggleFn}">
+      <div class="ship-card-no">${idx+1}</div>
+      ${imgHtml}
+      <div class="ship-card-info">
+        <div class="ship-card-row">
+          <span class="lbl">BC</span>
+          <span class="ship-card-bc">${item.バーコード||'-'} ${statusChip}</span>
+        </div>
+        <div class="ship-card-row"><span class="lbl">商品NO</span><span>${item.商品NO||'-'}</span></div>
+        <div class="ship-card-row"><span class="lbl">保管BC</span><span>${item.保管バーコード||'-'}</span></div>
+        <div class="ship-card-row"><span class="lbl">商品名</span><span>${item.商品名||'-'}</span></div>
+        <div class="ship-card-row"><span class="lbl">状態</span><span>${item.状態||'-'}</span></div>
+        <div class="ship-card-row"><span class="lbl">発送法</span><span>${item.発送手段||'-'}</span></div>
+        ${priceRow}
+      </div>
+      <button class="ship-card-del" onclick="${delFn}">✕</button>
+    </div>
+    <div class="ship-card-expand" id="${expandId}">
+      ${priceInput}
+      <button class="ship-detail-btn" id="${detailBtnId}" onclick="${detailFn}">📋 詳細情報 ▼</button>
+      <div class="ship-detail-area" id="${detailAreaId}">
+        <div class="ship-detail-grid">
+          <span class="ship-d-lbl">メーカー</span><span class="ship-d-val">${item.メーカー||'-'}</span>
+          <span class="ship-d-lbl">カラー</span>  <span class="ship-d-val">${item.カラー||'-'}</span>
+          <span class="ship-d-lbl">サイズ</span>  <span class="ship-d-val">${item.サイズ数量||'-'}</span>
+          <span class="ship-d-lbl">備考</span>    <span class="ship-d-val">${item.備考||'-'}</span>
+          <span class="ship-d-lbl">購入金額</span><span class="ship-d-val">${item.購入金額?'¥'+Number(item.購入金額).toLocaleString():'-'}</span>
+          <span class="ship-d-lbl">購入日</span>  <span class="ship-d-val">${item.購入日||'-'}</span>
+        </div>
+      </div>
+    </div>`;
+}
+
 // ── TAB1 発送作業（複数商品一括処理） ──
-let shipItems=[];// 複数商品配列
-let shipSellPrices={};// 各商品の販売金額 {識別ID: 金額}
+let shipItems=[];
+let shipSellPrices={};
 
 function addShipItem(item){
   if(shipItems.find(s=>s.識別ID===item.識別ID)){showToast('⚠️ すでに追加済みです','err');return;}
@@ -721,15 +774,30 @@ function removeShipItem(idx){
 
 function toggleShipCard(idx){
   const el=document.getElementById('ship-expand-'+idx);
-  if(el)el.classList.toggle('open');
+  if(el){
+    const isOpen=el.classList.toggle('open');
+    // ④ 1タップで詳細情報も同時に展開・閉じる
+    const detailArea=document.getElementById('ship-detail-area-'+idx);
+    const detailBtn=document.getElementById('ship-detail-btn-'+idx);
+    if(detailArea){
+      if(isOpen){detailArea.classList.add('open');if(detailBtn)detailBtn.textContent='📋 詳細情報 ▲';}
+      else{detailArea.classList.remove('open');if(detailBtn)detailBtn.textContent='📋 詳細情報 ▼';}
+    }
+  }
 }
 
-function toggleShipDetail(idx){
-  const el=document.getElementById('ship-detail-area-'+idx);
-  const btn=document.getElementById('ship-detail-btn-'+idx);
-  if(!el)return;
-  const isOpen=el.classList.toggle('open');
-  if(btn)btn.textContent=isOpen?'📋 詳細情報 ▲':'📋 詳細情報 ▼';
+function toggleBulkCard(idx){
+  const el=document.getElementById('bulk-expand-'+idx);
+  if(el){
+    const isOpen=el.classList.toggle('open');
+    // ④ 1タップで詳細情報も同時に展開・閉じる
+    const detailArea=document.getElementById('bulk-detail-area-'+idx);
+    const detailBtn=document.getElementById('bulk-detail-btn-'+idx);
+    if(detailArea){
+      if(isOpen){detailArea.classList.add('open');if(detailBtn)detailBtn.textContent='📋 詳細情報 ▲';}
+      else{detailArea.classList.remove('open');if(detailBtn)detailBtn.textContent='📋 詳細情報 ▼';}
+    }
+  }
 }
 
 function updateShipPrice(idx,val){
@@ -737,7 +805,6 @@ function updateShipPrice(idx,val){
   if(!item)return;
   const num=Number(val.replace(/[^0-9]/g,''))||0;
   shipSellPrices[item.識別ID]=num;
-  // サブテキストの販売金額表示更新
   const priceEl=document.getElementById('ship-card-price-'+idx);
   if(priceEl)priceEl.textContent=num>0?'💴 ¥'+num.toLocaleString():'';
 }
@@ -749,65 +816,12 @@ function renderShipList(){
   document.getElementById('ship-empty').style.display=count===0?'block':'none';
   document.getElementById('ship-form').style.display=count>0?'block':'none';
   listEl.innerHTML='';
-
-  shipItems.forEach((item,idx)=>{
+  // ⑤ 逆順表示（最新追加が上）・番号は追加順のまま
+  [...shipItems].reverse().forEach((item,revIdx)=>{
+    const idx=shipItems.length-1-revIdx;
     const card=document.createElement('div');
     card.className='ship-card';
-
-    // 画像HTML
-    const imgHtml=item.imgUrl
-      ?`<img class="ship-card-img" src="${item.imgUrl}" alt="商品画像" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" onload="this.style.display='block';this.nextElementSibling.style.display='none'"><div class="ship-card-no-img" style="display:none">🖼️</div>`
-      :`<div class="ship-card-no-img">🖼️</div>`;
-
-    // ステータスチップ（現在値1個表示・色付き）
-    const statusChip=item.ステータス
-      ?`<span class="ship-card-status" data-st="${item.ステータス}">${item.ステータス}</span>`:'';
-
-    // 販売金額サブテキスト（0以上の場合のみ）
-    const curPrice=shipSellPrices[item.識別ID]||0;
-    const priceSubText=curPrice>0?`<div class="ship-card-price" id="ship-card-price-${idx}">💴 ¥${curPrice.toLocaleString()}</div>`
-      :`<div class="ship-card-price" id="ship-card-price-${idx}"></div>`;
-
-    card.innerHTML=`
-      <div class="ship-card-header" onclick="toggleShipCard(${idx})">
-        <div class="ship-card-no">${idx+1}</div>
-        ${imgHtml}
-        <div class="ship-card-info">
-          <div class="ship-card-row"><span class="lbl">BC</span>${item.バーコード||'-'}${statusChip}</div>
-          <div class="ship-card-row"><span class="lbl">商品NO</span>${item.商品NO||'-'}</div>
-          <div class="ship-card-row"><span class="lbl">保管BC</span>${item.保管バーコード||'-'}</div>
-          <div class="ship-card-row"><span class="lbl">商品名</span>${item.商品名||'-'}</div>
-          <div class="ship-card-row"><span class="lbl">発送法</span>${item.発送手段||'-'}</div>
-          ${priceSubText}
-        </div>
-        <button class="ship-card-del" onclick="event.stopPropagation();removeShipItem(${idx})">✕</button>
-      </div>
-      <div class="ship-card-expand" id="ship-expand-${idx}">
-        <div class="ship-expand-price">
-          <div class="edit-row">
-            <span class="edit-lbl">💴 販売金額</span>
-            <div class="price-wrap">
-              <span class="price-prefix">¥</span>
-              <input type="text" inputmode="numeric" class="price-inp"
-                value="${curPrice>0?curPrice:''}"
-                placeholder="0"
-                oninput="updateShipPrice(${idx},this.value)">
-            </div>
-          </div>
-        </div>
-        <button class="ship-detail-btn" id="ship-detail-btn-${idx}" onclick="toggleShipDetail(${idx})">📋 詳細情報 ▼</button>
-        <div class="ship-detail-area" id="ship-detail-area-${idx}">
-          <div class="ship-detail-grid">
-            <span class="ship-d-lbl">状態</span><span class="ship-d-val">${item.状態||'-'}</span>
-            <span class="ship-d-lbl">メーカー</span><span class="ship-d-val">${item.メーカー||'-'}</span>
-            <span class="ship-d-lbl">カラー</span><span class="ship-d-val">${item.カラー||'-'}</span>
-            <span class="ship-d-lbl">サイズ</span><span class="ship-d-val">${item.サイズ数量||'-'}</span>
-            <span class="ship-d-lbl">備考</span><span class="ship-d-val">${item.備考||'-'}</span>
-            <span class="ship-d-lbl">購入金額</span><span class="ship-d-val">${item.購入金額?'¥'+Number(item.購入金額).toLocaleString():'-'}</span>
-            <span class="ship-d-lbl">購入日</span><span class="ship-d-val">${item.購入日||'-'}</span>
-          </div>
-        </div>
-      </div>`;
+    card.innerHTML=buildItemCardHTML(item,idx,'ship');
     listEl.appendChild(card);
   });
 }
@@ -855,26 +869,32 @@ function addBulkItem(item){
   if(bulkItems.find(b=>b.識別ID===item.識別ID)){showToast('⚠️ すでに追加済みです','err');return;}
   bulkItems.push(item);renderBulkList();showToast('✅ '+(item.商品名||item.バーコード)+' を追加');
 }
+function removeBulkItem(idx){bulkItems.splice(idx,1);renderBulkList();}
+
+function toggleBulkDetail(idx){
+  // 詳細ボタン直接タップ時もトグル動作（toggleBulkCardと連動）
+  const el=document.getElementById('bulk-detail-area-'+idx);
+  const btn=document.getElementById('bulk-detail-btn-'+idx);
+  if(!el)return;
+  const isOpen=el.classList.toggle('open');
+  if(btn)btn.textContent=isOpen?'📋 詳細情報 ▲':'📋 詳細情報 ▼';
+}
+
 function renderBulkList(){
   const listEl=document.getElementById('bulk-list');
   document.getElementById('bulk-count').textContent=bulkItems.length+'件 スキャン済み';
   document.getElementById('bulk-form').style.display=bulkItems.length>0?'block':'none';
   listEl.innerHTML='';
-  bulkItems.forEach((item,idx)=>{
-    const d=document.createElement('div');d.className='bulk-item';
-    const storageDisp=item.保管バーコード?` ／ 📍${item.保管バーコード}`:'';
-    // 発送手段：2行目（未登録は非表示）
-    const shipLine=item.発送手段
-      ?`<div class="bulk-item-sub-ship">🚚 ${item.発送手段}</div>`:'';
-    // 状態：3行目（未登録は非表示）
-    const condLine=item.状態
-      ?`<div class="bulk-item-sub-cond">🏷️ ${item.状態}</div>`:'';
-    d.innerHTML=`<div class="bulk-item-no">${idx+1}</div><div class="bulk-item-info"><div class="bulk-item-name">${item.商品名||'（商品名不明）'}</div><div class="bulk-item-sub">BC: ${item.バーコード} ／ ${item.ステータス||'-'}${storageDisp}</div>${shipLine}${condLine}</div><button class="bulk-item-del" onclick="removeBulkItem(${idx})">✕</button>`;
-    listEl.appendChild(d);
+  // ⑤ 逆順表示（最新追加が上）・番号は追加順のまま
+  [...bulkItems].reverse().forEach((item,revIdx)=>{
+    const idx=bulkItems.length-1-revIdx;
+    const card=document.createElement('div');
+    card.className='ship-card';
+    card.innerHTML=buildItemCardHTML(item,idx,'bulk');
+    listEl.appendChild(card);
   });
   buildStatusChips('bulk-status-chips',ALL_STATUSES,()=>bulkStatus,s=>{bulkStatus=s;});
 }
-function removeBulkItem(idx){bulkItems.splice(idx,1);renderBulkList();}
 function saveBulk(){
   if(bulkItems.length===0){showToast('⚠️ 商品をスキャンしてください','err');return;}
   const buyDate=document.getElementById('bulk-buy-date').value;
