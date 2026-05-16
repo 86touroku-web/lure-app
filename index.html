@@ -998,16 +998,28 @@ function execClearAlerts(){
 // リアルタイムチェック（複数回連続実行対応）
 function execRealtimeCheck(){
   const resultEl=document.getElementById('yahoo-popup-result');
-  resultEl.textContent='チェック実行中...';
-  showToast('🔄 リアルタイムチェック実行中...','info');
+  resultEl.textContent='🔄 チェック実行中...';
+  resultEl.style.color='#1565c0';
   gasCall('processYahooMails',{},res=>{
-    const msg=res&&res.processed!==undefined
-      ?'✅ '+res.processed+'件処理しました'
-      :'✅ チェック完了';
-    resultEl.textContent=msg;
-    showToast(msg);
+    if(res&&res.processed!==undefined){
+      const processed=res.processed||0;
+      const remaining=res.remaining||0;
+      if(remaining>0){
+        resultEl.textContent='✅ '+processed+'件処理 残り'+remaining+'件→再度チェックしてください';
+        resultEl.style.color='#e65100';
+      }else{
+        resultEl.textContent='✅ '+processed+'件処理 完了（残り0件）';
+        resultEl.style.color='#2e7d32';
+      }
+      showToast('✅ '+processed+'件処理 残り'+remaining+'件');
+    }else{
+      resultEl.textContent='✅ チェック完了';
+      resultEl.style.color='#2e7d32';
+      showToast('✅ チェック完了');
+    }
   },()=>{
-    resultEl.textContent='⚠️ 通信エラー';
+    resultEl.textContent='⚠️ 通信エラー（時間がかかる場合は再度タップ）';
+    resultEl.style.color='#c62828';
     showToast('⚠️ 通信エラー','err');
   });
 }
