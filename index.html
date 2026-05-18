@@ -185,7 +185,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 /* Ⅳ 見出し横幅を固定（2行にならないよう） */
 .ship-card-row span.lbl{color:#78909c;font-size:var(--fs-xs);flex-shrink:0;width:4.2rem;min-width:4.2rem;}
 /* Ⅱ BCとステータスチップの間にスペース */
-.ship-card-bc{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;}
+.ship-card-bc{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;font-size:var(--fs-md);font-weight:700;color:var(--text-dark);}
 .ship-card-price{font-size:var(--fs-sm);color:#1565c0;font-weight:700;margin-top:.2rem;}
 .ship-card-del{position:absolute;top:.5rem;right:.5rem;width:2.2rem;height:2.2rem;border-radius:50%;background:#f44336;color:#fff;border:none;font-size:1rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;z-index:2;}
 /* 展開エリア */
@@ -198,8 +198,8 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 .ship-detail-area{margin-top:.5rem;background:#fff;border-radius:var(--r);padding:.6rem .8rem;display:none;}
 .ship-detail-area.open{display:block;}
 /* Ⅳ 詳細情報グリッド：見出し幅を広く設定 */
-.ship-detail-grid{display:grid;grid-template-columns:5.5rem 1fr;gap:.35rem .4rem;}
-.ship-d-lbl{font-size:var(--fs-sm);font-weight:700;color:#00994a;white-space:nowrap;}
+.ship-detail-grid{display:grid;grid-template-columns:5.5rem 1fr;gap:.35rem 1.2rem;}
+.ship-d-lbl{font-size:var(--fs-sm);font-weight:700;color:#00994a;white-space:nowrap;text-align:right;}
 .ship-d-val{font-size:var(--fs-sm);font-weight:700;color:var(--text-dark);word-break:break-all;}
 
 /* ── リアルタイムチェックボタン ── */
@@ -238,7 +238,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 .chip.sel[data-st="販売済"] {border-color:#616161!important;box-shadow:0 0 0 .2rem #616161;}
 
 /* ship-card内のステータス表示チップ（選択不可・表示専用） */
-.ship-card-status{display:inline-block;padding:.15rem .55rem;border-radius:1rem;border:.12rem solid;font-size:.72rem;font-weight:700;color:#050505;margin-left:.3rem;vertical-align:middle;}
+.ship-card-status{display:inline-block;padding:.35rem .75rem;border-radius:2rem;border:.15rem solid;font-size:var(--fs-sm);font-weight:700;color:#050505;margin-left:.4rem;vertical-align:middle;}
 .ship-card-status[data-st="在庫"]   {background:#f5c158;border-color:#f5c158;}
 .ship-card-status[data-st="検品済"] {background:#c2d9ff;border-color:#c2d9ff;}
 .ship-card-status[data-st="保品"]   {background:#ffffff;border-color:#cfd8dc;}
@@ -341,7 +341,6 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
   <!-- 空状態 -->
   <div id="ship-empty">
     <div class="empty-icon">📦</div>
-    バーコードをスキャンまたは<br>商品NOを入力して検索してください
   </div>
 
   <!-- 商品カードリスト -->
@@ -778,8 +777,7 @@ let shipSellPrices={};
 function addShipItem(item){
   if(shipItems.find(s=>s.識別ID===item.識別ID)){showToast('⚠️ すでに追加済みです','err');return;}
   shipItems.push(item);
-  // W列（販売金額）に落札価格が入っていれば初期値として使用（変更可能）
-  shipSellPrices[item.識別ID]=item.販売金額>0?item.販売金額:0;
+  shipSellPrices[item.識別ID]=0;
   renderShipList();
   showToast('✅ '+(item.商品名||item.バーコード)+' を追加');
 }
