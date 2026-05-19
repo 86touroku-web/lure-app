@@ -997,28 +997,39 @@ function execClearAlerts(){
 // リアルタイムチェック（複数回連続実行対応）
 function execRealtimeCheck(){
   const resultEl=document.getElementById('yahoo-popup-result');
-  resultEl.textContent='🔄 チェック実行中...';
+  resultEl.innerHTML='🔄 チェック実行中...';
   resultEl.style.color='#1565c0';
   gasCall('processYahooMails',{},res=>{
     if(res&&res.processed!==undefined){
       const processed=res.processed||0;
       const remaining=res.remaining||0;
+      const conflicts=res.conflicts||0;
+      // メール処理結果
+      let html='';
       if(remaining>0){
-        resultEl.textContent='✅ '+processed+'件処理 残り'+remaining+'件→再度チェックしてください';
-        resultEl.style.color='#e65100';
+        html+='<div style="color:#e65100">✅ '+processed+'件処理 残り'+remaining+'件→再度チェックしてください</div>';
       }else{
-        resultEl.textContent='✅ '+processed+'件処理 完了（残り0件）';
-        resultEl.style.color='#2e7d32';
+        html+='<div style="color:#2e7d32">✅ '+processed+'件処理 完了（残り0件）</div>';
       }
-      showToast('✅ '+processed+'件処理 残り'+remaining+'件');
+      // 異常検出メッセージ
+      if(conflicts>0){
+        html+='<div style="margin-top:.5rem;font-weight:700;color:#c62828">⚠️ 異常を検出しました</div>';
+        if(res.sold>0)      html+='<div style="color:#c62828">🔴 販売済商品の出品アリ: '+res.sold+'件</div>';
+        if(res.duplicates>0)html+='<div style="color:#c62828">🔴 同一商品NOの出品アリ: '+res.duplicates+'件</div>';
+        if(res.missing>0)   html+='<div style="color:#c62828">🔴 存在しない商品NOの出品アリ: '+res.missing+'件</div>';
+        if(res.mismatch>0)  html+='<div style="color:#e65100">🟠 ステータス矛盾: '+res.mismatch+'件</div>';
+        showToast('⚠️ 異常検出 '+conflicts+'件','err');
+      }else{
+        html+='<div style="color:#2e7d32;font-size:.8rem">✅ 異常なし</div>';
+        showToast('✅ '+processed+'件処理 残り'+remaining+'件');
+      }
+      resultEl.innerHTML=html;
     }else{
-      resultEl.textContent='✅ チェック完了';
-      resultEl.style.color='#2e7d32';
+      resultEl.innerHTML='<div style="color:#2e7d32">✅ チェック完了</div>';
       showToast('✅ チェック完了');
     }
   },()=>{
-    resultEl.textContent='⚠️ 通信エラー（時間がかかる場合は再度タップ）';
-    resultEl.style.color='#c62828';
+    resultEl.innerHTML='<div style="color:#c62828">⚠️ 通信エラー（時間がかかる場合は再度タップ）</div>';
     showToast('⚠️ 通信エラー','err');
   });
 }
