@@ -214,6 +214,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 .yahoo-popup-btn.check{background:linear-gradient(90deg,#1565c0,#1976d2);color:#fff;}
 .yahoo-popup-btn.close{background:#f0f4f8;color:var(--text-mid);margin-bottom:0;}
 .yahoo-popup-result{font-size:var(--fs-xs);color:#1565c0;text-align:center;margin-bottom:.5rem;min-height:1.8rem;}
+.yahoo-alert-banner{display:none;width:calc(100% + 2.8rem);margin:-1.8rem -1.4rem 1rem;padding:.9rem 1rem;background:linear-gradient(90deg,#e91e63,#f06292);color:#fff;font-weight:800;font-size:var(--fs-sm);text-align:center;border-radius:1.2rem 1.2rem 0 0;line-height:1.5;}.yahoo-alert-banner.show{display:block;}
 
 /* ── ステータスチップ色（発送作業・一括編集共通） ── */
 /* テキストは常に#050505、背景色を最下層に配色 */
@@ -981,6 +982,8 @@ function clearBulk(){
 // ── ヤフオク管理ポップアップ ──
 function openYahooPopup(){
   document.getElementById('yahoo-popup-result').textContent='';
+  const b=document.getElementById('yahoo-alert-banner');
+  if(b){b.classList.remove('show');b.innerHTML='';}
   document.getElementById('yahoo-popup-ov').classList.add('open');
 }
 function closeYahooPopup(){
@@ -999,37 +1002,41 @@ function execRealtimeCheck(){
   const resultEl=document.getElementById('yahoo-popup-result');
   resultEl.innerHTML='🔄 チェック実行中...';
   resultEl.style.color='#1565c0';
+  const bannerEl=document.getElementById('yahoo-alert-banner');
   gasCall('processYahooMails',{},res=>{
     if(res&&res.processed!==undefined){
       const processed=res.processed||0;
       const remaining=res.remaining||0;
       const conflicts=res.conflicts||0;
-      // メール処理結果
-      let html='';
+      // メール処理結果（小さいテキスト）
       if(remaining>0){
-        html+='<div style="color:#e65100">✅ '+processed+'件処理 残り'+remaining+'件→再度チェックしてください</div>';
+        resultEl.innerHTML='<span style="color:#e65100">✅ '+processed+'件処理 残り'+remaining+'件→再度チェック</span>';
       }else{
-        html+='<div style="color:#2e7d32">✅ '+processed+'件処理 完了（残り0件）</div>';
+        resultEl.innerHTML='<span style="color:#2e7d32">✅ '+processed+'件処理 完了（残り0件）</span>';
       }
-      // 異常検出メッセージ
+      // 異常検出バナー（上部・幅いっぱい・赤ピンク）
       if(conflicts>0){
-        html+='<div style="margin-top:.5rem;font-weight:700;color:#c62828">⚠️ 異常を検出しました</div>';
-        if(res.sold>0)      html+='<div style="color:#c62828">🔴 販売済商品の出品アリ: '+res.sold+'件</div>';
-        if(res.duplicates>0)html+='<div style="color:#c62828">🔴 同一商品NOの出品アリ: '+res.duplicates+'件</div>';
-        if(res.missing>0)   html+='<div style="color:#c62828">🔴 存在しない商品NOの出品アリ: '+res.missing+'件</div>';
-        if(res.mismatch>0)  html+='<div style="color:#e65100">🟠 ステータス矛盾: '+res.mismatch+'件</div>';
+        let lines=[];
+        lines.push('⚠️ 異常を検出しました');
+        if(res.sold>0)       lines.push('🔴 販売済商品の出品アリ '+res.sold+'件');
+        if(res.duplicates>0) lines.push('🔴 同一商品NOの出品アリ '+res.duplicates+'件');
+        if(res.missing>0)    lines.push('🔴 存在しない商品NOの出品アリ '+res.missing+'件');
+        if(res.mismatch>0)   lines.push('🟠 ステータス矛盾 '+res.mismatch+'件');
+        bannerEl.innerHTML=lines.join('<br>');
+        bannerEl.classList.add('show');
         showToast('⚠️ 異常検出 '+conflicts+'件','err');
       }else{
-        html+='<div style="color:#2e7d32;font-size:.8rem">✅ 異常なし</div>';
+        bannerEl.classList.remove('show');
         showToast('✅ '+processed+'件処理 残り'+remaining+'件');
       }
-      resultEl.innerHTML=html;
     }else{
-      resultEl.innerHTML='<div style="color:#2e7d32">✅ チェック完了</div>';
+      resultEl.innerHTML='<span style="color:#2e7d32">✅ チェック完了</span>';
+      bannerEl.classList.remove('show');
       showToast('✅ チェック完了');
     }
   },()=>{
-    resultEl.innerHTML='<div style="color:#c62828">⚠️ 通信エラー（時間がかかる場合は再度タップ）</div>';
+    resultEl.innerHTML='<span style="color:#c62828">⚠️ 通信エラー（時間がかかる場合は再度タップ）</span>';
+    bannerEl.classList.remove('show');
     showToast('⚠️ 通信エラー','err');
   });
 }
@@ -1053,6 +1060,7 @@ loadMasters();
 <!-- ヤフオク管理ポップアップ -->
 <div class="yahoo-popup-ov" id="yahoo-popup-ov">
   <div class="yahoo-popup">
+    <div class="yahoo-alert-banner" id="yahoo-alert-banner"></div>
     <div class="yahoo-popup-title">🔍 ヤフオク管理</div>
     <div class="yahoo-popup-result" id="yahoo-popup-result"></div>
     <button class="yahoo-popup-btn clear" onclick="execClearAlerts()">✅ アラート解除</button>
