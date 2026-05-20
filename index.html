@@ -1021,7 +1021,6 @@ function execRealtimeCheck(){
         if(res.sold>0)       lines.push('🔴 販売済商品の出品アリ '+res.sold+'件');
         if(res.duplicates>0) lines.push('🔴 同一商品NOの出品アリ '+res.duplicates+'件');
         if(res.missing>0)    lines.push('🔴 存在しない商品NOの出品アリ '+res.missing+'件');
-        if(res.mismatch>0)   lines.push('🟠 ステータス矛盾 '+res.mismatch+'件');
         bannerEl.innerHTML=lines.join('<br>');
         bannerEl.classList.add('show');
         showToast('⚠️ 異常検出 '+conflicts+'件','err');
