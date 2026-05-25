@@ -1086,4 +1086,27 @@ function loadMasters(isRetry){
     buildStatusChips('bulk-status-chips',ALL_STATUSES,()=>bulkStatus,s=>{bulkStatus=s;});
     // リトライボタンが残っていれば消す
     const rb=document.getElementById('master-retry-btn');
-  
+    if(rb)rb.remove();
+  },err=>{
+    hideLoad();
+    if(!_masterRetried){
+      _masterRetried=true;
+      // リトライボタンを発送作業画面に追加
+      const scr=document.getElementById('screen-ship');
+      if(scr&&!document.getElementById('master-retry-btn')){
+        const btn=document.createElement('button');
+        btn.id='master-retry-btn';
+        btn.className='big-btn btn-danger';
+        btn.style.cssText='margin-top:1rem;';
+        btn.textContent='🔄 再接続する';
+        btn.onclick=()=>loadMasters(true);
+        scr.insertBefore(btn,scr.firstChild);
+      }
+      showToast('⚠️ 接続失敗 - 再接続ボタンを押してください','err');
+    }
+  });
+}
+window.onload=()=>loadMasters(false);
+</script>
+</body>
+</html>
