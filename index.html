@@ -858,23 +858,66 @@ function saveShipping(){
   showDialog('一括発送保存（販売済）',
     `${shipItems.length}件を販売済に変更します\n\n${summary}\n\n販売済日: ${soldDate.replace(/-/g,'/')}\n\n保存しますか？`,
     ()=>{
-      showLoad('保存中...');
+      showLoad('誤商品チェック中...');
+      // ★ updateShippingを1件ずつ呼んで誤商品チェックを行う
+      // GAS側(コード.gs)のupdateShipping()がmisshipment:trueを返したら警告表示
       const items=shipItems.map(item=>({
         rowIndex:item.rowIndex,
         ステータス:'販売済',
         販売済日:soldDate.replace(/-/g,'/'),
         販売金額:shipSellPrices[item.識別ID]||0
       }));
-      gasCall('bulkUpdate',{items:items},
-        res=>{
+      // まず全件の誤商品チェックのみ実行（ステータス更新は行わない）
+      let checkIdx=0;
+      const misshipments=[];
+      function checkNext(){
+        if(checkIdx>=items.length){
+          // 全件チェック完了
           hideLoad();
-          if(res&&res.ok){
-            showToast('✅ '+items.length+'件 保存しました');
-            clearShip();
-          }else showToast('⚠️ 保存に失敗しました','err');
-        },
-        ()=>{hideLoad();showToast('⚠️ 通信エラー','err');});
+          if(misshipments.length>0){
+            // 誤商品が検出された場合は警告ダイアログ
+            const warnMsg=misshipments.map(m=>
+              `🚨 No.${m.productNo} 登録金額:¥${(m.currentPrice||0).toLocaleString()}`
+            ).join('\n');
+            showDialog('🚨 誤商品の可能性あり',
+              `以下の商品はすでに「販売済」かつ\n販売金額が登録されています。\n\n${warnMsg}\n\n誤った商品を発送しようとしていませんか？\n\n「OK」を押すと保存をキャンセルします。`,
+              ()=>{/* OKでキャンセル・商品確認へ */},
+              ()=>{ doSaveShipping(items); } // 「強制保存」で続行
+            );
+          } else {
+            // 誤商品なし → 通常保存
+            doSaveShipping(items);
+          }
+          return;
+        }
+        // 1件ずつupdateShippingを呼んで誤商品チェック
+        gasCall('updateShipping', items[checkIdx],
+          res=>{
+            if(res && res.misshipment){
+              misshipments.push(res);
+            }
+            checkIdx++;
+            checkNext();
+          },
+          ()=>{ hideLoad(); showToast('⚠️ 通信エラー','err'); }
+        );
+      }
+      checkNext();
     },null);
+}
+
+// 誤商品チェック通過後の実際の保存処理
+function doSaveShipping(items){
+  showLoad('保存中...');
+  gasCall('bulkUpdate',{items:items},
+    res=>{
+      hideLoad();
+      if(res&&res.ok){
+        showToast('✅ '+items.length+'件 保存しました');
+        clearShip();
+      }else showToast('⚠️ 保存に失敗しました','err');
+    },
+    ()=>{hideLoad();showToast('⚠️ 通信エラー','err');});
 }
 
 function clearShip(){
@@ -1057,42 +1100,4 @@ function loadMasters(isRetry){
     buildStatusChips('bulk-status-chips',ALL_STATUSES,()=>bulkStatus,s=>{bulkStatus=s;});
     // リトライボタンが残っていれば消す
     const rb=document.getElementById('master-retry-btn');
-    if(rb)rb.remove();
-  },()=>{
-    hideLoad();
-    if(!_masterRetried){
-      // 初回エラー：3秒後に自動リトライ（コールドスタート対策）
-      _masterRetried=true;
-      showToast('⚠️ 接続中... 自動再試行します','err');
-      setTimeout(()=>loadMasters(true),3500);
-    }else{
-      // 2回目もエラー：手動リトライボタンを表示
-      showToast('⚠️ マスタ読み込みエラー','err');
-      if(!document.getElementById('master-retry-btn')){
-        const btn=document.createElement('button');
-        btn.id='master-retry-btn';
-        btn.textContent='🔄 再読み込み';
-        btn.style.cssText='display:block;margin:1rem auto;padding:.7rem 2rem;'
-          +'background:#1565c0;color:#fff;border:none;border-radius:2rem;'
-          +'font-size:1rem;font-weight:700;cursor:pointer;';
-        btn.onclick=()=>{_masterRetried=false;loadMasters(true);};
-        document.getElementById('ship-list').before(btn);
-      }
-    }
-  });
-}
-loadMasters();
-</script>
-<!-- ヤフオク管理ポップアップ -->
-<div class="yahoo-popup-ov" id="yahoo-popup-ov">
-  <div class="yahoo-popup">
-    <div class="yahoo-alert-banner" id="yahoo-alert-banner"></div>
-    <div class="yahoo-popup-title">🔍 ヤフオク管理</div>
-    <div class="yahoo-popup-result" id="yahoo-popup-result"></div>
-    <button class="yahoo-popup-btn clear" onclick="execClearAlerts()">✅ アラート解除</button>
-    <button class="yahoo-popup-btn check" onclick="execRealtimeCheck()">🔄 リアルタイム・チェック</button>
-    <button class="yahoo-popup-btn close" onclick="closeYahooPopup()">閉じる</button>
-  </div>
-</div>
-
-</html>
+  
