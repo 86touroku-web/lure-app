@@ -342,7 +342,6 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
   <!-- 空状態 -->
   <div id="ship-empty">
     <div class="empty-icon">📦</div>
-    バーコードをスキャンまたは<br>商品NOを入力して検索してください
   </div>
 
   <!-- 商品カードリスト -->
@@ -457,7 +456,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 
 <script>
 // GitHub Pages直接アクセス用GAS URL
-const GAS_URL='https://script.google.com/macros/s/AKfycbyV5NXK_4Lv5DfSDJfRXA5l1LlRISqa9TsGrGQi95Baq_tbCLx3j5pawaRSmQnny2-jEQ/exec';
+const GAS_URL='https://script.google.com/macros/s/AKfycbwszCwfSETnzE2RvEMb2qXCPPuqgD8Ybu6efEw6t714REwHQVJtEE-Qu7WeWZx-oGZ12w/exec';
 // 発送処理チップ：販売済を除く6個
 const SHIP_STATUSES=['在庫','検品済','保品','No有','出タイ待','出品'];
 // 一括編集チップ：全7個
@@ -1102,16 +1101,5 @@ function loadMasters(isRetry){
 }
 window.onload=()=>loadMasters(false);
 </script>
-<!-- ヤフオク管理ポップアップ -->
-<div class="yahoo-popup-ov" id="yahoo-popup-ov">
-  <div class="yahoo-popup">
-    <div class="yahoo-alert-banner" id="yahoo-alert-banner"></div>
-    <div class="yahoo-popup-title">🔍 ヤフオク管理</div>
-    <div class="yahoo-popup-result" id="yahoo-popup-result"></div>
-    <button class="yahoo-popup-btn clear" onclick="execClearAlerts()">✅ アラート解除</button>
-    <button class="yahoo-popup-btn check" onclick="execRealtimeCheck()">🔄 リアルタイム・チェック</button>
-    <button class="yahoo-popup-btn close" onclick="closeYahooPopup()">閉じる</button>
-  </div>
-</div>
-
+</body>
 </html>
