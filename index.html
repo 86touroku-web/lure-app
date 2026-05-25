@@ -849,29 +849,29 @@ function saveShipping(){
   const soldDate=document.getElementById('ship-sold-date').value;
   if(!soldDate){showToast('⚠️ 販売済日を入力してください','err');return;}
 
-  // ★ 誤商品チェック（クライアント側・GAS呼び出しなし）
-  // 発送リストの中に「販売済」かつ「販売金額>0」の商品があれば警告
-  // ← 販売金額は落札メール処理で自動書き込みされるため
-  //    金額が入っている = 既に別の落札で処理済みの商品
-  const suspects = shipItems.filter(item =>
-    String(item.ステータス||'') === '販売済' && Number(item.販売金額||0) > 0
-  );
-  if(suspects.length > 0){
-    const warnList = suspects.map(item =>
-      'No.' + (item.商品NO||'-') + ' ' + (item.商品名||item.バーコード||'')
+  // ★ 誤商品チェック：「販売済」かつ「販売金額入力済み」の商品を検出
+  const suspectItems = shipItems.filter(item => {
+    return item.ステータス === '販売済' && Number(item.販売金額||0) > 0;
+  });
+
+  if(suspectItems.length > 0){
+    const suspectNames = suspectItems.map(item =>
+      `⚠️ No.${item.商品NO||'-'} ${item.商品名||item.バーコード}\n   ステータス:販売済 登録金額:¥${Number(item.販売金額).toLocaleString()}`
     ).join('\n');
-    showDialog('🚨 誤商品の可能性あり',
-      '以下の商品はすでに「販売済」かつ\n販売金額が登録されています。\n誤った商品を発送しようとしていませんか？\n\n' + warnList + '\n\n「キャンセル」で戻って確認してください。',
-      ()=>{ /* OKで保存キャンセル・何もしない */ },
-      ()=>{ _execSaveShipping(soldDate); } /* 「キャンセル」ボタン側で強制保存 */
+    showDialog(
+      '🚨 誤商品の可能性あり',
+      `以下の商品はすでに「販売済」かつ販売金額が登録されています。\n誤った商品を発送しようとしていませんか？\n\n${suspectNames}\n\nそれでも保存しますか？`,
+      () => _doSaveShipping(soldDate),  // OKなら続行
+      null  // キャンセルで戻る
     );
     return;
   }
 
-  _execSaveShipping(soldDate);
+  _doSaveShipping(soldDate);
 }
 
-function _execSaveShipping(soldDate){
+function _doSaveShipping(soldDate){
+  // 確認ダイアログ
   const summary=shipItems.map((item,i)=>{
     const p=shipSellPrices[item.識別ID]||0;
     return `${i+1}. ${item.商品名||item.バーコード} ¥${p.toLocaleString()}`;
@@ -1079,27 +1079,4 @@ function loadMasters(isRetry){
     buildStatusChips('bulk-status-chips',ALL_STATUSES,()=>bulkStatus,s=>{bulkStatus=s;});
     // リトライボタンが残っていれば消す
     const rb=document.getElementById('master-retry-btn');
-    if(rb)rb.remove();
-  },err=>{
-    hideLoad();
-    if(!_masterRetried){
-      _masterRetried=true;
-      // リトライボタンを発送作業画面に追加
-      const scr=document.getElementById('screen-ship');
-      if(scr&&!document.getElementById('master-retry-btn')){
-        const btn=document.createElement('button');
-        btn.id='master-retry-btn';
-        btn.className='big-btn btn-danger';
-        btn.style.cssText='margin-top:1rem;';
-        btn.textContent='🔄 再接続する';
-        btn.onclick=()=>loadMasters(true);
-        scr.insertBefore(btn,scr.firstChild);
-      }
-      showToast('⚠️ 接続失敗 - 再接続ボタンを押してください','err');
-    }
-  });
-}
-window.onload=()=>loadMasters(false);
-</script>
-</body>
-</html>
+  
