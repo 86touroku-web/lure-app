@@ -849,28 +849,6 @@ function saveShipping(){
   const soldDate=document.getElementById('ship-sold-date').value;
   if(!soldDate){showToast('⚠️ 販売済日を入力してください','err');return;}
 
-  // ★ 誤商品チェック：「販売済」かつ「販売金額入力済み」の商品を検出
-  const suspectItems = shipItems.filter(item => {
-    return item.ステータス === '販売済' && Number(item.販売金額||0) > 0;
-  });
-
-  if(suspectItems.length > 0){
-    const suspectNames = suspectItems.map(item =>
-      `⚠️ No.${item.商品NO||'-'} ${item.商品名||item.バーコード}\n   ステータス:販売済 登録金額:¥${Number(item.販売金額).toLocaleString()}`
-    ).join('\n');
-    showDialog(
-      '🚨 誤商品の可能性あり',
-      `以下の商品はすでに「販売済」かつ販売金額が登録されています。\n誤った商品を発送しようとしていませんか？\n\n${suspectNames}\n\nそれでも保存しますか？`,
-      () => _doSaveShipping(soldDate),  // OKなら続行
-      null  // キャンセルで戻る
-    );
-    return;
-  }
-
-  _doSaveShipping(soldDate);
-}
-
-function _doSaveShipping(soldDate){
   // 確認ダイアログ
   const summary=shipItems.map((item,i)=>{
     const p=shipSellPrices[item.識別ID]||0;
@@ -1079,4 +1057,42 @@ function loadMasters(isRetry){
     buildStatusChips('bulk-status-chips',ALL_STATUSES,()=>bulkStatus,s=>{bulkStatus=s;});
     // リトライボタンが残っていれば消す
     const rb=document.getElementById('master-retry-btn');
-  
+    if(rb)rb.remove();
+  },()=>{
+    hideLoad();
+    if(!_masterRetried){
+      // 初回エラー：3秒後に自動リトライ（コールドスタート対策）
+      _masterRetried=true;
+      showToast('⚠️ 接続中... 自動再試行します','err');
+      setTimeout(()=>loadMasters(true),3500);
+    }else{
+      // 2回目もエラー：手動リトライボタンを表示
+      showToast('⚠️ マスタ読み込みエラー','err');
+      if(!document.getElementById('master-retry-btn')){
+        const btn=document.createElement('button');
+        btn.id='master-retry-btn';
+        btn.textContent='🔄 再読み込み';
+        btn.style.cssText='display:block;margin:1rem auto;padding:.7rem 2rem;'
+          +'background:#1565c0;color:#fff;border:none;border-radius:2rem;'
+          +'font-size:1rem;font-weight:700;cursor:pointer;';
+        btn.onclick=()=>{_masterRetried=false;loadMasters(true);};
+        document.getElementById('ship-list').before(btn);
+      }
+    }
+  });
+}
+loadMasters();
+</script>
+<!-- ヤフオク管理ポップアップ -->
+<div class="yahoo-popup-ov" id="yahoo-popup-ov">
+  <div class="yahoo-popup">
+    <div class="yahoo-alert-banner" id="yahoo-alert-banner"></div>
+    <div class="yahoo-popup-title">🔍 ヤフオク管理</div>
+    <div class="yahoo-popup-result" id="yahoo-popup-result"></div>
+    <button class="yahoo-popup-btn clear" onclick="execClearAlerts()">✅ アラート解除</button>
+    <button class="yahoo-popup-btn check" onclick="execRealtimeCheck()">🔄 リアルタイム・チェック</button>
+    <button class="yahoo-popup-btn close" onclick="closeYahooPopup()">閉じる</button>
+  </div>
+</div>
+
+</html>
