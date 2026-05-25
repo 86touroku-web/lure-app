@@ -859,16 +859,9 @@ function saveShipping(){
   if(suspects.length > 0){
     const warnList = suspects.map(item =>
       'No.' + (item.商品NO||'-') + ' ' + (item.商品名||item.バーコード||'')
-    ).join('
-');
+    ).join('\n');
     showDialog('🚨 誤商品の可能性あり',
-      '以下の商品はすでに「販売済」かつ
-販売金額が登録されています。
-誤った商品を発送しようとしていませんか？
-
-' + warnList + '
-
-「キャンセル」で戻って確認してください。',
+      '以下の商品はすでに「販売済」かつ\n販売金額が登録されています。\n誤った商品を発送しようとしていませんか？\n\n' + warnList + '\n\n「キャンセル」で戻って確認してください。',
       ()=>{ /* OKで保存キャンセル・何もしない */ },
       ()=>{ _execSaveShipping(soldDate); } /* 「キャンセル」ボタン側で強制保存 */
     );
