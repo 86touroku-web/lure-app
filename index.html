@@ -849,7 +849,36 @@ function saveShipping(){
   const soldDate=document.getElementById('ship-sold-date').value;
   if(!soldDate){showToast('⚠️ 販売済日を入力してください','err');return;}
 
-  // 確認ダイアログ
+  // ★ 誤商品チェック（クライアント側・GAS呼び出しなし）
+  // 発送リストの中に「販売済」かつ「販売金額>0」の商品があれば警告
+  // ← 販売金額は落札メール処理で自動書き込みされるため
+  //    金額が入っている = 既に別の落札で処理済みの商品
+  const suspects = shipItems.filter(item =>
+    String(item.ステータス||'') === '販売済' && Number(item.販売金額||0) > 0
+  );
+  if(suspects.length > 0){
+    const warnList = suspects.map(item =>
+      'No.' + (item.商品NO||'-') + ' ' + (item.商品名||item.バーコード||'')
+    ).join('
+');
+    showDialog('🚨 誤商品の可能性あり',
+      '以下の商品はすでに「販売済」かつ
+販売金額が登録されています。
+誤った商品を発送しようとしていませんか？
+
+' + warnList + '
+
+「キャンセル」で戻って確認してください。',
+      ()=>{ /* OKで保存キャンセル・何もしない */ },
+      ()=>{ _execSaveShipping(soldDate); } /* 「キャンセル」ボタン側で強制保存 */
+    );
+    return;
+  }
+
+  _execSaveShipping(soldDate);
+}
+
+function _execSaveShipping(soldDate){
   const summary=shipItems.map((item,i)=>{
     const p=shipSellPrices[item.識別ID]||0;
     return `${i+1}. ${item.商品名||item.バーコード} ¥${p.toLocaleString()}`;
@@ -858,66 +887,23 @@ function saveShipping(){
   showDialog('一括発送保存（販売済）',
     `${shipItems.length}件を販売済に変更します\n\n${summary}\n\n販売済日: ${soldDate.replace(/-/g,'/')}\n\n保存しますか？`,
     ()=>{
-      showLoad('誤商品チェック中...');
-      // ★ updateShippingを1件ずつ呼んで誤商品チェックを行う
-      // GAS側(コード.gs)のupdateShipping()がmisshipment:trueを返したら警告表示
+      showLoad('保存中...');
       const items=shipItems.map(item=>({
         rowIndex:item.rowIndex,
         ステータス:'販売済',
         販売済日:soldDate.replace(/-/g,'/'),
         販売金額:shipSellPrices[item.識別ID]||0
       }));
-      // まず全件の誤商品チェックのみ実行（ステータス更新は行わない）
-      let checkIdx=0;
-      const misshipments=[];
-      function checkNext(){
-        if(checkIdx>=items.length){
-          // 全件チェック完了
+      gasCall('bulkUpdate',{items:items},
+        res=>{
           hideLoad();
-          if(misshipments.length>0){
-            // 誤商品が検出された場合は警告ダイアログ
-            const warnMsg=misshipments.map(m=>
-              `🚨 No.${m.productNo} 登録金額:¥${(m.currentPrice||0).toLocaleString()}`
-            ).join('\n');
-            showDialog('🚨 誤商品の可能性あり',
-              `以下の商品はすでに「販売済」かつ\n販売金額が登録されています。\n\n${warnMsg}\n\n誤った商品を発送しようとしていませんか？\n\n「OK」を押すと保存をキャンセルします。`,
-              ()=>{/* OKでキャンセル・商品確認へ */},
-              ()=>{ doSaveShipping(items); } // 「強制保存」で続行
-            );
-          } else {
-            // 誤商品なし → 通常保存
-            doSaveShipping(items);
-          }
-          return;
-        }
-        // 1件ずつupdateShippingを呼んで誤商品チェック
-        gasCall('updateShipping', items[checkIdx],
-          res=>{
-            if(res && res.misshipment){
-              misshipments.push(res);
-            }
-            checkIdx++;
-            checkNext();
-          },
-          ()=>{ hideLoad(); showToast('⚠️ 通信エラー','err'); }
-        );
-      }
-      checkNext();
+          if(res&&res.ok){
+            showToast('✅ '+items.length+'件 保存しました');
+            clearShip();
+          }else showToast('⚠️ 保存に失敗しました','err');
+        },
+        ()=>{hideLoad();showToast('⚠️ 通信エラー','err');});
     },null);
-}
-
-// 誤商品チェック通過後の実際の保存処理
-function doSaveShipping(items){
-  showLoad('保存中...');
-  gasCall('bulkUpdate',{items:items},
-    res=>{
-      hideLoad();
-      if(res&&res.ok){
-        showToast('✅ '+items.length+'件 保存しました');
-        clearShip();
-      }else showToast('⚠️ 保存に失敗しました','err');
-    },
-    ()=>{hideLoad();showToast('⚠️ 通信エラー','err');});
 }
 
 function clearShip(){
