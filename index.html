@@ -342,6 +342,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
   <!-- 空状態 -->
   <div id="ship-empty">
     <div class="empty-icon">📦</div>
+    バーコードをスキャンまたは<br>商品NOを入力して検索してください
   </div>
 
   <!-- 商品カードリスト -->
@@ -1101,5 +1102,16 @@ function loadMasters(isRetry){
 }
 window.onload=()=>loadMasters(false);
 </script>
-</body>
+<!-- ヤフオク管理ポップアップ -->
+<div class="yahoo-popup-ov" id="yahoo-popup-ov">
+  <div class="yahoo-popup">
+    <div class="yahoo-alert-banner" id="yahoo-alert-banner"></div>
+    <div class="yahoo-popup-title">🔍 ヤフオク管理</div>
+    <div class="yahoo-popup-result" id="yahoo-popup-result"></div>
+    <button class="yahoo-popup-btn clear" onclick="execClearAlerts()">✅ アラート解除</button>
+    <button class="yahoo-popup-btn check" onclick="execRealtimeCheck()">🔄 リアルタイム・チェック</button>
+    <button class="yahoo-popup-btn close" onclick="closeYahooPopup()">閉じる</button>
+  </div>
+</div>
+
 </html>
