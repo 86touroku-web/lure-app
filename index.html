@@ -850,19 +850,19 @@ function saveShipping(){
   if(!soldDate){showToast('⚠️ 販売済日を入力してください','err');return;}
 
   // ★ 誤商品チェック：「販売済」かつ「販売金額入力済み」の商品を検出
-  const suspectItems = shipItems.filter(item => {
-    return item.ステータス === '販売済' && Number(item.販売金額||0) > 0;
+  const suspectItems=shipItems.filter(item=>{
+    return item.ステータス==='販売済'&&Number(item.販売金額||0)>0;
   });
 
-  if(suspectItems.length > 0){
-    const suspectNames = suspectItems.map(item =>
+  if(suspectItems.length>0){
+    const suspectNames=suspectItems.map(item=>
       `⚠️ No.${item.商品NO||'-'} ${item.商品名||item.バーコード}\n   ステータス:販売済 登録金額:¥${Number(item.販売金額).toLocaleString()}`
     ).join('\n');
     showDialog(
       '🚨 誤商品の可能性あり',
       `以下の商品はすでに「販売済」かつ販売金額が登録されています。\n誤った商品を発送しようとしていませんか？\n\n${suspectNames}\n\nそれでも保存しますか？`,
-      () => _doSaveShipping(soldDate),  // OKなら続行
-      null  // キャンセルで戻る
+      ()=>_doSaveShipping(soldDate),
+      null
     );
     return;
   }
@@ -1062,9 +1062,8 @@ function execRealtimeCheck(){
   });
 }
 // ── 初期化 ──
-let _masterRetried=false;
-function loadMasters(isRetry){
-  showLoad(isRetry?'再接続中...':'データ読み込み中...');
+function loadMasters(){
+  showLoad('データ読み込み中...');
   // 販売済日デフォルト：今日
   const t=new Date();
   const today=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
@@ -1072,11 +1071,23 @@ function loadMasters(isRetry){
   // 発送リスト初期化
   renderShipList();
   gasCall('getMasters',{},res=>{
-    hideLoad();
-    _masterRetried=false;
-    if(res&&res.ok)masters=res;
+    hideLoad();if(res&&res.ok)masters=res;
     buildStatusChips('ship-status-chips',SHIP_STATUSES,()=>shipStatus,s=>{shipStatus=s;});
     buildStatusChips('bulk-status-chips',ALL_STATUSES,()=>bulkStatus,s=>{bulkStatus=s;});
-    // リトライボタンが残っていれば消す
-    const rb=document.getElementById('master-retry-btn');
-  
+  },()=>{hideLoad();showToast('⚠️ マスタ読み込みエラー','err');});
+}
+loadMasters();
+</script>
+<!-- ヤフオク管理ポップアップ -->
+<div class="yahoo-popup-ov" id="yahoo-popup-ov">
+  <div class="yahoo-popup">
+    <div class="yahoo-alert-banner" id="yahoo-alert-banner"></div>
+    <div class="yahoo-popup-title">🔍 ヤフオク管理</div>
+    <div class="yahoo-popup-result" id="yahoo-popup-result"></div>
+    <button class="yahoo-popup-btn clear" onclick="execClearAlerts()">✅ アラート解除</button>
+    <button class="yahoo-popup-btn check" onclick="execRealtimeCheck()">🔄 リアルタイム・チェック</button>
+    <button class="yahoo-popup-btn close" onclick="closeYahooPopup()">閉じる</button>
+  </div>
+</div>
+
+</html>
