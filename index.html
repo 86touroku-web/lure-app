@@ -182,18 +182,18 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 .ship-card-img{width:6.5rem;min-height:10rem;object-fit:cover;border-radius:.5rem;flex-shrink:0;align-self:stretch;margin-right:.5rem;}
 .ship-card-no-img{width:6.5rem;min-height:10rem;border-radius:.5rem;background:#e8eaf0;display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0;color:#90a4ae;margin-right:.5rem;}
 .ship-card-info{flex:1;min-width:0;}
-/* 各行：グリッドレイアウト（番号丸＋小見出し固定幅右揃え＋値） */
-.ship-card-row{display:grid;grid-template-columns:auto 5rem 1fr;align-items:baseline;gap:0 0;line-height:1.75;word-break:break-all;}
-/* BC行専用（番号丸あり） */
+/* 各行：グリッドレイアウト（小見出し固定幅右揃え＋値） */
+.ship-card-row{display:grid;grid-template-columns:5rem 1fr;align-items:baseline;gap:0 .6rem;line-height:1.75;word-break:break-all;}
+/* BC行専用（番号丸あり・flex） */
 .ship-card-row.bc-row{display:flex;align-items:center;gap:.4rem;margin-bottom:.1rem;}
 /* 追加順番号丸 */
 .ship-card-no{width:2.2rem;height:2.2rem;border-radius:50%;background:var(--blue-mid);color:#fff;font-size:var(--fs-xs);font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 /* 小見出し：右揃え固定幅 */
 .ship-card-lbl{font-size:var(--fs-sm);font-weight:700;color:#00994a;white-space:nowrap;text-align:right;width:5rem;min-width:5rem;flex-shrink:0;}
-/* BC行ラベル（番号丸の右・右揃え） */
+/* BC行ラベル（番号丸の右） */
 .ship-card-bc-lbl{font-size:var(--fs-sm);font-weight:700;color:#00994a;white-space:nowrap;}
-/* 小見出しと値の間スペース */
-.ship-card-sp{display:inline-block;width:.6rem;flex-shrink:0;}
+/* スペース要素（BC行用のみ残す） */
+.ship-card-sp{display:none;}
 /* 値 */
 .ship-card-val{font-size:var(--fs-sm);font-weight:700;color:var(--text-dark);word-break:break-all;min-width:0;}
 /* BCとステータスチップ */
@@ -734,9 +734,8 @@ function buildItemCardHTML(item, idx, mode){
   // 販売金額インライン入力（発送作業のみ・コンパクト）
   const curPrice = mode==='ship' ? (shipSellPrices[item.識別ID]||0) : 0;
   const priceRow = mode==='ship'
-    ? `<div class="ship-price-row">
+    ? `<div class="ship-card-row" style="align-items:center;">
         <span class="ship-card-lbl">販売金額</span>
-        <span class="ship-card-sp"></span>
         <div class="ship-price-wrap" onclick="event.stopPropagation()">
           <span class="ship-price-prefix">¥</span>
           <input type="text" inputmode="numeric" class="ship-price-inp"
@@ -753,32 +752,26 @@ function buildItemCardHTML(item, idx, mode){
         <div class="ship-card-row bc-row">
           <div class="ship-card-no">${idx+1}</div>
           <span class="ship-card-bc-lbl">BC</span>
-          <span class="ship-card-sp"></span>
           <span class="ship-card-bc">${item.バーコード||'-'} ${statusChip}</span>
         </div>
         <div class="ship-card-row">
           <span class="ship-card-lbl">商品NO</span>
-          <span class="ship-card-sp"></span>
           <span class="ship-card-val">${item.商品NO||'-'}</span>
         </div>
         <div class="ship-card-row">
           <span class="ship-card-lbl">保管BC</span>
-          <span class="ship-card-sp"></span>
           <span class="ship-card-val">${item.保管バーコード||'-'}</span>
         </div>
         <div class="ship-card-row">
           <span class="ship-card-lbl">商品名</span>
-          <span class="ship-card-sp"></span>
           <span class="ship-card-val">${item.商品名||'-'}</span>
         </div>
         <div class="ship-card-row">
           <span class="ship-card-lbl">状態</span>
-          <span class="ship-card-sp"></span>
           <span class="ship-card-val">${item.状態||'-'}</span>
         </div>
         <div class="ship-card-row">
           <span class="ship-card-lbl">発送</span>
-          <span class="ship-card-sp"></span>
           <span class="ship-card-val">${item.発送手段||'-'}</span>
         </div>
         ${priceRow}
