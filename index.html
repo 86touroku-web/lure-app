@@ -269,6 +269,40 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 .bulk-form-title{font-size:var(--fs-sm);font-weight:800;color:#fff;margin-bottom:.6rem;}
 .form-row{margin-bottom:.7rem;}
 .form-label{font-size:var(--fs-xs);font-weight:700;color:rgba(255,255,255,.85);margin-bottom:.3rem;}
+/* ── 升目選択ボタン（セクション③） ── */
+.bulk-sel-grid{
+  display:grid;
+  border:.22rem solid #3ffc6b;
+  border-radius:.6rem;
+  overflow:hidden;
+  margin-bottom:.8rem;
+}
+.bulk-sel-row{display:flex;}
+.bulk-sel-row:not(:last-child){border-bottom:.15rem solid #3ffc6b;}
+.bulk-sel-cell{
+  flex:1;
+  background:#fff;
+  color:#000;
+  font-size:1.35rem;
+  font-weight:700;
+  text-align:center;
+  padding:.75rem .2rem;
+  cursor:pointer;
+  border:none;
+  border-right:.15rem solid #3ffc6b;
+  line-height:1.2;
+  transition:background .12s;
+  -webkit-tap-highlight-color:transparent;
+}
+.bulk-sel-cell:last-child{border-right:none;}
+.bulk-sel-cell.active{
+  outline:.22rem solid #FF00FF;
+  outline-offset:-.22rem;
+  background:#fff0ff;
+  color:#000;
+  z-index:1;
+  position:relative;
+}
 /* ── ポップアップ ── */
 .popup-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:850;align-items:flex-end;justify-content:center;}
 .popup-ov.open{display:flex;}
@@ -416,39 +450,74 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
     <div class="bulk-form-section">
       <div class="bulk-form-title">● 一括で変更する項目を入力</div>
       <div style="font-size:var(--fs-xs);color:rgba(255,255,255,.6);margin-bottom:.7rem">※空欄の項目は変更されません</div>
-      <!-- ⑤ 保管場所バーコード（最上段・横長スキャンボタン） -->
+
+      <!-- ①保管場所スキャン（常時表示） -->
       <div class="form-row">
         <div class="form-label">📦 保管場所バーコード</div>
         <button class="big-btn btn-scan" style="width:100%;margin-bottom:.4rem;" onclick="startScan('bulk-storage')">📷 保管場所をスキャン</button>
         <div id="bulk-storage-val" style="min-height:3.6rem;background:rgba(0,0,0,.25);border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:var(--fs-md);font-weight:700;color:#fff;padding:.4rem 1rem;letter-spacing:.05em;"></div>
       </div>
+
+      <!-- ②ステータス（常時表示） -->
       <div class="form-row">
         <div class="form-label">ステータス</div>
         <div class="chip-grp" id="bulk-status-chips"></div>
       </div>
-      <!-- ④ 状態（プルダウン） -->
-      <div class="form-row">
-        <div class="form-label">🏷️ 状態</div>
-        <button class="sel-btn" onclick="openPopup('bulk-condition')"><span id="bulk-condition-val">選択してください</span><span>▼</span></button>
+
+      <!-- ③升目選択ボタン（タップでON/OFF） -->
+      <div class="form-label" style="margin-bottom:.4rem;">🏷️ 入力項目を選択</div>
+      <div class="bulk-sel-grid">
+        <!-- 上段5項目 -->
+        <div class="bulk-sel-row">
+          <button class="bulk-sel-cell" id="sel-btn-buydate"    onclick="toggleBulkField('buydate')">購入日</button>
+          <button class="bulk-sel-cell" id="sel-btn-condition"  onclick="toggleBulkField('condition')">状態</button>
+          <button class="bulk-sel-cell" id="sel-btn-note"       onclick="toggleBulkField('note')">備考</button>
+          <button class="bulk-sel-cell" id="sel-btn-shop"       onclick="toggleBulkField('shop')">店名</button>
+          <button class="bulk-sel-cell" id="sel-btn-color"      onclick="toggleBulkField('color')">カラー</button>
+        </div>
+        <!-- 下段4項目（均等幅） -->
+        <div class="bulk-sel-row">
+          <button class="bulk-sel-cell" id="sel-btn-buyprice"   onclick="toggleBulkField('buyprice')">購入金額</button>
+          <button class="bulk-sel-cell" id="sel-btn-name"       onclick="toggleBulkField('name')">商品名</button>
+          <button class="bulk-sel-cell" id="sel-btn-size"       onclick="toggleBulkField('size')">サイズ・数量</button>
+          <button class="bulk-sel-cell" id="sel-btn-stock"      onclick="toggleBulkField('stock')">在庫確認</button>
+        </div>
       </div>
-      <div class="form-row">
+
+      <!-- ④動的入力欄（選択された項目のみ表示） -->
+      <div id="bulk-field-buydate" style="display:none" class="form-row">
         <div class="form-label">📅 購入日</div>
         <input type="date" class="inp" id="bulk-buy-date">
       </div>
-      <div class="form-row">
-        <div class="form-label">💴 購入金額</div>
-        <div class="price-wrap" style="height:var(--h-inp)"><span class="price-prefix">¥</span><input type="text" inputmode="numeric" class="price-inp" id="bulk-buy-price" placeholder="0"></div>
+      <div id="bulk-field-condition" style="display:none" class="form-row">
+        <div class="form-label">🏷️ 状態</div>
+        <button class="sel-btn" onclick="openPopup('bulk-condition')"><span id="bulk-condition-val">選択してください</span><span>▼</span></button>
       </div>
-      <div class="form-row">
+      <div id="bulk-field-note" style="display:none" class="form-row">
+        <div class="form-label">📝 備考</div>
+        <input type="text" class="inp" id="bulk-note" placeholder="備考を入力" autocomplete="off" autocorrect="off" spellcheck="false">
+      </div>
+      <div id="bulk-field-shop" style="display:none" class="form-row">
         <div class="form-label">🏪 店名</div>
         <button class="sel-btn" onclick="openPopup('bulk-shop')"><span id="bulk-shop-val">選択してください</span><span>▼</span></button>
       </div>
-      <div class="form-row">
+      <div id="bulk-field-color" style="display:none" class="form-row">
+        <div class="form-label">🎨 カラー</div>
+        <input type="text" class="inp" id="bulk-color" placeholder="カラーを入力" autocomplete="off" autocorrect="off" spellcheck="false">
+      </div>
+      <div id="bulk-field-buyprice" style="display:none" class="form-row">
+        <div class="form-label">💴 購入金額</div>
+        <div class="price-wrap" style="height:var(--h-inp)"><span class="price-prefix">¥</span><input type="text" inputmode="numeric" class="price-inp" id="bulk-buy-price" placeholder="0"></div>
+      </div>
+      <div id="bulk-field-name" style="display:none" class="form-row">
         <div class="form-label">📦 商品名</div>
         <button class="sel-btn" onclick="openPopup('bulk-name')"><span id="bulk-name-val">選択してください</span><span>▼</span></button>
       </div>
-      <!-- 在庫確認チップ（有・無） -->
-      <div class="form-row">
+      <div id="bulk-field-size" style="display:none" class="form-row">
+        <div class="form-label">📏 サイズ・数量</div>
+        <input type="text" class="inp" id="bulk-size" placeholder="サイズ・数量を入力" autocomplete="off" autocorrect="off" spellcheck="false">
+      </div>
+      <div id="bulk-field-stock" style="display:none" class="form-row">
         <div class="form-label">📋 在庫確認</div>
         <div class="stock-chip-grp">
           <button class="stock-chip" id="stock-chip-yes" onclick="selectStockCheck('有')">有</button>
@@ -480,7 +549,10 @@ const ALL_STATUSES=['在庫','検品済','保品','No有','出タイ待','出品
 let masters={statuses:ALL_STATUSES,shippings:[],shops:[],makers:[],nameList:[]};
 let shipItem=null,shipStatus='';
 const CONDITION_LIST=['未使用','未使用に近い','目立ったキズや汚れナシ','目立ったキズや汚れアリ','キズや汚れアリ','全体に状態が悪い'];
-let bulkItems=[],bulkStatus='',bulkShop='',bulkNameId='',bulkNameLabel='',bulkCondition='',bulkStorageBarcode='',bulkStockCheck='';
+let bulkItems=[],bulkStatus='',bulkShop='',bulkNameId='',bulkNameLabel='',bulkCondition='',bulkStorageBarcode='',bulkStockCheck='',bulkNote='',bulkColor='',bulkSize='';
+// 升目ボタン選択状態
+const BULK_FIELDS=['buydate','condition','note','shop','color','buyprice','name','size','stock'];
+let bulkFieldActive={buydate:false,condition:false,note:false,shop:false,color:false,buyprice:false,name:false,size:false,stock:false};
 let scanMode='',popupTarget='';
 
 // ── GAS通信（JSONP方式・GitHub Pages直接アクセス用） ──
@@ -562,6 +634,14 @@ function selectStockCheck(val){
   bulkStockCheck=val;
   document.getElementById('stock-chip-yes').classList.toggle('sel',val==='有');
   document.getElementById('stock-chip-no').classList.toggle('sel',val==='無');
+}
+// ── 升目ボタン ON/OFF トグル ──
+function toggleBulkField(key){
+  bulkFieldActive[key]=!bulkFieldActive[key];
+  const btn=document.getElementById('sel-btn-'+key);
+  const field=document.getElementById('bulk-field-'+key);
+  if(btn)btn.classList.toggle('active',bulkFieldActive[key]);
+  if(field)field.style.display=bulkFieldActive[key]?'block':'none';
 }
 // ── 販売済ボタンタップ処理 ──
 function selectSold(){
@@ -1003,6 +1083,12 @@ function _executeBulkSave(items,buyDate,buyPrice){
     if(bulkCondition)p.状態=bulkCondition;
     if(bulkStorageBarcode)p.保管バーコード=bulkStorageBarcode;
     if(bulkStockCheck==='有'||bulkStockCheck==='無')p.在庫確認=bulkStockCheck;
+    const bulkNoteVal=document.getElementById('bulk-note')?document.getElementById('bulk-note').value.trim():'';
+    const bulkColorVal=document.getElementById('bulk-color')?document.getElementById('bulk-color').value.trim():'';
+    const bulkSizeVal=document.getElementById('bulk-size')?document.getElementById('bulk-size').value.trim():'';
+    if(bulkNoteVal)p.備考=bulkNoteVal;
+    if(bulkColorVal)p.カラー=bulkColorVal;
+    if(bulkSizeVal)p.サイズ数量=bulkSizeVal;
     return p;
   });
   gasCall('bulkUpdate',{items:payload},
@@ -1011,7 +1097,8 @@ function _executeBulkSave(items,buyDate,buyPrice){
 }
 function clearBulk(){
   bulkItems=[];bulkStatus='';bulkShop='';bulkNameId='';bulkNameLabel='';bulkCondition='';bulkStorageBarcode='';bulkStockCheck='';
-  ['bulk-buy-date','bulk-buy-price'].forEach(id=>document.getElementById(id).value='');
+  bulkNote='';bulkColor='';bulkSize='';
+  ['bulk-buy-date','bulk-buy-price','bulk-note','bulk-color','bulk-size'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('bulk-shop-val').textContent='選択してください';
   document.getElementById('bulk-name-val').textContent='選択してください';
   document.getElementById('bulk-condition-val').textContent='選択してください';
@@ -1019,6 +1106,14 @@ function clearBulk(){
   // 在庫確認チップをリセット
   document.getElementById('stock-chip-yes').classList.remove('sel');
   document.getElementById('stock-chip-no').classList.remove('sel');
+  // 升目ボタンを全リセット
+  BULK_FIELDS.forEach(k=>{
+    bulkFieldActive[k]=false;
+    const btn=document.getElementById('sel-btn-'+k);
+    const field=document.getElementById('bulk-field-'+k);
+    if(btn)btn.classList.remove('active');
+    if(field)field.style.display='none';
+  });
   renderBulkList();
 }
 // ── ヤフオク管理ポップアップ ──
