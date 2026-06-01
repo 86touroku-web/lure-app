@@ -104,18 +104,26 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 .btn-row{display:flex;gap:.8rem;margin-bottom:.8rem;}
 .btn-row .big-btn{flex:1;}
 /* ── A: 検索ブロック ── */
-.search-block{display:flex;gap:.6rem;align-items:stretch;}
-.scan-col{flex:0 0 9rem;}
-/* スキャンボタンと右側の高さを完全一致させる */
+.search-block{display:grid;grid-template-columns:9rem 1fr;gap:.6rem;align-items:stretch;}
+.scan-col{}
 .scan-col .big-btn{
-  height:100%;
+  width:100%;height:100%;
   min-height:calc(var(--h-inp) * 2 + .4rem);
   flex-direction:column;gap:.3rem;font-size:var(--fs-sm);line-height:1.3;
 }
-.search-right{flex:1;display:flex;flex-direction:column;gap:.4rem;}
-.search-right .inp{height:var(--h-inp);flex:1;}
-.search-right .btn-search{height:var(--h-inp);font-size:var(--fs-sm);}
-/* ① 検索入力テキスト中央寄せ */
+.search-right{display:flex;flex-direction:column;gap:.4rem;}
+/* 入力欄：白枠＋ドロップシャドウで立体感（赤丸②） */
+.search-right .inp{
+  height:var(--h-inp);flex:1;
+  border:2px solid #ffffff!important;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.3));
+}
+/* 追加ボタン：スキャンボタンと同じ幅・高さに統一 */
+.search-right .btn-search{
+  height:var(--h-inp);font-size:var(--fs-sm);
+  width:100%;
+}
+/* 検索入力テキスト中央寄せ */
 #search-input,#bulk-search-input{text-align:center;}
 /* ── B: 商品情報ブロック ── */
 .product-layout{display:flex;gap:.8rem;align-items:flex-start;}
@@ -244,13 +252,13 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 /* タップ中（Active）: 95%に縮小 */
 .chip:active{ transform:scale(.95) !important; }
 /* 各ステータス別 未選択時背景色 */
-.chip[data-st="在庫"]   {background:#f5c158!important;border-color:#f5c158!important;color:#050505!important;}
-.chip[data-st="検品済"] {background:#c2d9ff!important;border-color:#c2d9ff!important;color:#050505!important;}
-.chip[data-st="保品"]   {background:#ffffff!important;border-color:#cfd8dc!important;color:#050505!important;}
-.chip[data-st="No有"]   {background:#b9f6ca!important;border-color:#b9f6ca!important;color:#050505!important;}
-.chip[data-st="出タイ待"]{background:#e546fa!important;border-color:#e546fa!important;color:#050505!important;}
-.chip[data-st="出品"]   {background:#f44336!important;border-color:#f44336!important;color:#050505!important;}
-.chip[data-st="販売済"] {background:#9e9e9e!important;border-color:#9e9e9e!important;color:#050505!important;}
+.chip[data-st="在庫"]   {background:#f5c158!important;border:.1rem solid #ffffff!important;color:#050505!important;}
+.chip[data-st="検品済"] {background:#c2d9ff!important;border:.1rem solid #ffffff!important;color:#050505!important;}
+.chip[data-st="保品"]   {background:#ffffffcc!important;border:.1rem solid #ffffff!important;color:#050505!important;}
+.chip[data-st="No有"]   {background:#b9f6ca!important;border:.1rem solid #ffffff!important;color:#050505!important;}
+.chip[data-st="出タイ待"]{background:#e546fa!important;border:.1rem solid #ffffff!important;color:#050505!important;}
+.chip[data-st="出品"]   {background:#f44336!important;border:.1rem solid #ffffff!important;color:#050505!important;}
+.chip[data-st="販売済"] {background:#9e9e9e!important;border:.1rem solid #ffffff!important;color:#050505!important;}
 /* ── 選択中（Selected）: モノトーン反転 共通 ── */
 .chip.sel{
   transform:scale(1.05) !important;
@@ -287,16 +295,16 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 /* ── 升目選択ボタン（セクション③） ── */
 .bulk-sel-grid{
   display:grid;
-  border:.2rem solid #3ffc6b;
+  border:.2rem solid #ffffff;
   border-radius:.6rem;
   overflow:hidden;
   margin-bottom:.8rem;
 }
 .bulk-sel-row{display:flex;}
-.bulk-sel-row:not(:last-child){border-bottom:.15rem solid #3ffc6b;}
+.bulk-sel-row:not(:last-child){border-bottom:.15rem solid #ffffff;}
 .bulk-sel-cell{
   flex:1;
-  background:#0d1117;
+  background:#1942e6;
   color:#ffffff;
   font-size:1.35rem;
   font-weight:700;
@@ -304,9 +312,9 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
   padding:.75rem .2rem;
   cursor:pointer;
   border:none;
-  border-right:.15rem solid #3ffc6b;
+  border-right:.15rem solid #ffffff;
   line-height:1.2;
-  transition:all .15s ease-out;
+  transition:all .1s ease-out;
   -webkit-tap-highlight-color:transparent;
   transform:scale(1);
   position:relative;
@@ -317,20 +325,16 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 .bulk-sel-cell:active{
   transform:scale(.95) !important;
 }
-/* 選択中（Selected）: コッパーレッド＋ゴールド ＋ ネオングロー */
+/* 選択中（Selected）: 漆黒＋白文字＋inset shadow（凹み感） */
 .bulk-sel-cell.active{
-  background:linear-gradient(to bottom,#4a1515,#1f0505)!important;
-  color:#d4af37!important;
+  background:#000000!important;
+  color:#ffffff!important;
   font-weight:bold!important;
-  border-right:.15rem solid #d4af37!important;
-  box-shadow:0 0 10px rgba(255,77,77,.5)!important;
-  transform:scale(1.02)!important;
+  border-right:.15rem solid #ffffff!important;
+  box-shadow:inset 0 2px 6px rgba(0,0,0,.7),inset 0 -1px 2px rgba(255,255,255,.08)!important;
+  transform:scale(1)!important;
   z-index:1;
   position:relative;
-}
-/* 選択中セルの行区切り線もゴールドに */
-.bulk-sel-row:not(:last-child):has(.bulk-sel-cell.active){
-  border-bottom-color:#d4af37;
 }
 /* ── ポップアップ ── */
 .popup-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:850;align-items:flex-end;justify-content:center;}
@@ -672,7 +676,7 @@ function toggleBulkField(key){
   // 行区切り線：選択中セルがある行はゴールドに（:has非対応ブラウザ対策）
   document.querySelectorAll('.bulk-sel-row').forEach(row=>{
     const hasActive=row.querySelector('.bulk-sel-cell.active');
-    row.style.borderBottomColor=hasActive?'#d4af37':'#3ffc6b';
+    row.style.borderBottomColor='#ffffff';
   });
 }
 // ── 販売済ボタンタップ処理 ──
