@@ -288,13 +288,13 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 /* タップ中（Active）: 95%に縮小 */
 .chip:active{ transform:scale(.95) !important; }
 /* 各ステータス別 未選択時背景色 */
-.chip[data-st="在庫"]   {background:#f5c158!important;border:.1rem solid #ffffff!important;color:#050505!important;}
-.chip[data-st="検品済"] {background:#c2d9ff!important;border:.1rem solid #ffffff!important;color:#050505!important;}
-.chip[data-st="保品"]   {background:#ffffffcc!important;border:.1rem solid #ffffff!important;color:#050505!important;}
-.chip[data-st="No有"]   {background:#b9f6ca!important;border:.1rem solid #ffffff!important;color:#050505!important;}
-.chip[data-st="出タイ待"]{background:#e546fa!important;border:.1rem solid #ffffff!important;color:#050505!important;}
-.chip[data-st="出品"]   {background:#f44336!important;border:.1rem solid #ffffff!important;color:#050505!important;}
-.chip[data-st="販売済"] {background:#9e9e9e!important;border:.1rem solid #ffffff!important;color:#050505!important;}
+.chip[data-st="在庫"]   {background:#f5c158!important;border:2px solid #ffffff!important;color:#050505!important;box-shadow:0 1px 4px rgba(0,0,0,.35)!important;}
+.chip[data-st="検品済"] {background:#c2d9ff!important;border:2px solid #ffffff!important;color:#050505!important;box-shadow:0 1px 4px rgba(0,0,0,.35)!important;}
+.chip[data-st="保品"]   {background:#ffffffcc!important;border:2px solid #ffffff!important;color:#050505!important;box-shadow:0 1px 4px rgba(0,0,0,.35)!important;}
+.chip[data-st="No有"]   {background:#b9f6ca!important;border:2px solid #ffffff!important;color:#050505!important;box-shadow:0 1px 4px rgba(0,0,0,.35)!important;}
+.chip[data-st="出タイ待"]{background:#e546fa!important;border:2px solid #ffffff!important;color:#050505!important;box-shadow:0 1px 4px rgba(0,0,0,.35)!important;}
+.chip[data-st="出品"]   {background:#f44336!important;border:2px solid #ffffff!important;color:#050505!important;box-shadow:0 1px 4px rgba(0,0,0,.35)!important;}
+.chip[data-st="販売済"] {background:#9e9e9e!important;border:2px solid #ffffff!important;color:#050505!important;box-shadow:0 1px 4px rgba(0,0,0,.35)!important;}
 /* ── 選択中（Selected）: モノトーン反転 共通 ── */
 .chip.sel{
   transform:scale(1.05) !important;
@@ -313,14 +313,14 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 .chip.sel[data-st="販売済"] {color:#9e9e9e!important;}
 
 /* ship-card内のステータス表示チップ（選択不可・表示専用） */
-.ship-card-status{display:inline-block;padding:.35rem .75rem;border-radius:2rem;border:.15rem solid;font-size:var(--fs-sm);font-weight:700;color:#050505;margin-left:.4rem;vertical-align:middle;}
-.ship-card-status[data-st="在庫"]   {background:#f5c158;border-color:#f5c158;}
-.ship-card-status[data-st="検品済"] {background:#c2d9ff;border-color:#c2d9ff;}
-.ship-card-status[data-st="保品"]   {background:#ffffff;border-color:#cfd8dc;}
-.ship-card-status[data-st="No有"]   {background:#b9f6ca;border-color:#b9f6ca;}
-.ship-card-status[data-st="出タイ待"]{background:#e546fa;border-color:#e546fa;}
-.ship-card-status[data-st="出品"]   {background:#f44336;border-color:#f44336;}
-.ship-card-status[data-st="販売済"] {background:#9e9e9e;border-color:#9e9e9e;}
+.ship-card-status{display:inline-block;padding:.35rem .75rem;border-radius:2rem;border:2px solid #ffffff;font-size:var(--fs-sm);font-weight:700;color:#050505;margin-left:.4rem;vertical-align:middle;box-shadow:0 1px 4px rgba(0,0,0,.35);}
+.ship-card-status[data-st="在庫"]   {background:#f5c158;}
+.ship-card-status[data-st="検品済"] {background:#c2d9ff;}
+.ship-card-status[data-st="保品"]   {background:#ffffffcc;}
+.ship-card-status[data-st="No有"]   {background:#b9f6ca;}
+.ship-card-status[data-st="出タイ待"]{background:#e546fa;}
+.ship-card-status[data-st="出品"]   {background:#f44336;}
+.ship-card-status[data-st="販売済"] {background:#9e9e9e;}
 /* ── リアルタイムチェックボタン ── */
 /* ── 一括編集フォーム ── */
 .bulk-count{text-align:center;font-size:var(--fs-sm);font-weight:700;color:rgba(255,255,255,.8);margin-bottom:.6rem;}
@@ -458,7 +458,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
   </div>
 
   <!-- 件数表示 -->
-  <div class="bulk-count" id="ship-count">0件 追加済み</div>
+  <div class="bulk-count" id="ship-count" style="display:none;"></div>
 
   <!-- 空状態 -->
   <div id="ship-empty">
@@ -520,7 +520,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
   <div id="bulk-list"></div>
   <div id="bulk-form" style="display:none">
     <div class="bulk-form-section">
-      <div class="bulk-form-title">● 一括で変更する項目を入力</div>
+      <div class="bulk-form-title">● 一括編集項目</div>
 
       <!-- ①保管場所スキャン（常時表示） -->
       <div class="form-row">
@@ -739,9 +739,15 @@ function buildStatusChips(id,statusList,getV,setV){
     b.dataset.st=s;
     b.style.webkitTapHighlightColor='transparent';
     b.onclick=()=>{
-      setV(s);
-      grp.querySelectorAll('.chip').forEach(c=>c.classList.remove('sel'));
-      b.classList.add('sel');
+      if(getV()===s){
+        // 同チップ再タップ → 選択解除
+        setV('');
+        grp.querySelectorAll('.chip').forEach(c=>c.classList.remove('sel'));
+      } else {
+        setV(s);
+        grp.querySelectorAll('.chip').forEach(c=>c.classList.remove('sel'));
+        b.classList.add('sel');
+      }
     };
     grp.appendChild(b);
   });
@@ -1013,7 +1019,9 @@ function updateShipPrice(idx,val){
 function renderShipList(){
   const listEl=document.getElementById('ship-list');
   const count=shipItems.length;
-  document.getElementById('ship-count').textContent=count+'件 追加済み';
+  const shipCountEl=document.getElementById('ship-count');
+  if(count===0){shipCountEl.style.display='none';shipCountEl.textContent='';}
+  else{shipCountEl.style.display='';shipCountEl.textContent=count+'件 追加済み';}
   document.getElementById('ship-empty').style.display=count===0?'block':'none';
   document.getElementById('ship-form').style.display=count>0?'block':'none';
   listEl.innerHTML='';
