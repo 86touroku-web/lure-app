@@ -864,16 +864,41 @@ function searchBulkManual(){
   fetchProduct(val,'bulk');
 }
 // ── 商品検索 ──
-function fetchProduct(keyword,mode){
-  // 半角英数字のみの場合は大文字変換（全角文字含む場合はそのまま送信）
-  const safeKeyword=/^[A-Za-z0-9\-]+$/.test(keyword)?keyword.toUpperCase():keyword;
+function fetchProduct(keyword, mode) {
+  const safeKeyword = /^[A-Za-z0-9\-]+$/.test(keyword)
+    ? keyword.toUpperCase() : keyword;
   showLoad('商品照合中...');
-  gasCall('getProductByBarcode',{barcode:safeKeyword,keyword:safeKeyword},res=>{
-    hideLoad();
-    if(res&&res.found){if(mode==='ship')addShipItem(res.item);else addBulkItem(res.item);}
-    else showToast('⚠️ 未登録のバーコード / 商品NOです','err');
-  },()=>{hideLoad();showToast('⚠️ 通信エラー','err');});
+
+  // ── STEP1：通常バーコード／商品NO検索 ────────────────────────
+  gasCall('getProductByBarcode', {barcode: safeKeyword, keyword: safeKeyword}, res => {
+    if (res && res.found) {
+      hideLoad();
+      if (mode === 'ship') addShipItem(res.item);
+      else                 addBulkItem(res.item);
+      return;
+    }
+
+    // ── STEP2：通常検索でヒットしない → セット用BC検索 ─────────
+    // 発送タブでもセット用BCをスキャンした場合に案内する
+    gasCall('getProductsBySetBarcode', {barcode: safeKeyword}, res2 => {
+      hideLoad();
+      if (res2 && res2.found) {
+        if (mode === 'bulk') {
+          // ★ 一括編集タブ：セット全件をまとめて追加
+          res2.items.forEach(item => addBulkItem(item));
+          showToast('✅ セット商品 ' + res2.items.length + '件を追加しました');
+        } else {
+          // 発送タブはセット商品非対応（一括編集タブへ案内）
+          showToast('⚠️ セット商品は「一括編集」タブをご利用ください', 'err');
+        }
+      } else {
+        showToast('⚠️ 未登録のバーコード / 商品NOです', 'err');
+      }
+    }, () => { hideLoad(); showToast('⚠️ 通信エラー', 'err'); });
+
+  }, () => { hideLoad(); showToast('⚠️ 通信エラー', 'err'); });
 }
+
 // ══════════════════════════════════════════════
 //  共通：商品情報カードHTML生成
 //  mode='ship'→販売金額入力あり
