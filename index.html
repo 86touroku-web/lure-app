@@ -449,7 +449,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
         <button class="big-btn btn-scan" onclick="startScan('ship')">📷<br>スキャン</button>
       </div>
       <div class="search-right-inp">
-        <input type="text" class="inp" id="search-input" placeholder="バーコード / 商品NO" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" oninput="this.value=this.value.replace(/[^A-Za-z0-9\-]/g,'').toUpperCase()" onkeydown="if(event.key==='Enter'){searchManual()}">
+        <input type="text" class="inp" id="search-input" placeholder="バーコード / 商品NO" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" oninput="this.value=this.value.replace(/[^A-Za-z0-9\-]/g,'').toUpperCase()" onkeydown="if(event.key==='Enter'){searchManual()}">
       </div>
       <div class="search-right-btn">
         <button class="big-btn btn-search" onclick="searchManual()">🔍 追加</button>
@@ -499,7 +499,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
       </div>
       <div class="search-right-inp">
         <input type="text" class="inp" id="bulk-search-input"
-               inputmode="numeric" autocomplete="off" autocorrect="off"
+               inputmode="text" autocomplete="off" autocorrect="off"
                autocapitalize="characters" spellcheck="false"
                placeholder="バーコード / 商品NO"
                style="text-align:center;"
