@@ -919,13 +919,37 @@ function searchBulkManual(){
 }
 // ── 商品検索 ──
 function fetchProduct(keyword,mode){
-  // 半角英数字のみの場合は大文字変換（全角文字含む場合はそのまま送信）
   const safeKeyword=/^[A-Za-z0-9\-]+$/.test(keyword)?keyword.toUpperCase():keyword;
   showLoad('商品照合中...');
   gasCall('getProductByBarcode',{barcode:safeKeyword,keyword:safeKeyword},res=>{
     hideLoad();
-    if(res&&res.found){if(mode==='ship')addShipItem(res.item);else addBulkItem(res.item);}
-    else showToast('⚠️ 未登録のバーコード / 商品NOです','err');
+    if(!res||!res.found){showToast('⚠️ 未登録のバーコード / 商品NOです','err');return;}
+
+    if(mode==='ship'){
+      // 発送作業：単品のみ（セット対応なし）
+      addShipItem(res.item);
+      return;
+    }
+
+    // 一括編集：セット登録済みの場合は全商品を自動一括追加
+    if(res.isSet && res.setItems && res.setItems.length > 0){
+      let added=0;
+      res.setItems.forEach(item=>{
+        // バーコードで重複チェック（同一BCは追加しない）
+        if(!bulkItems.find(b=>b.バーコード===item.バーコード)){
+          bulkItems.push(item); added++;
+        }
+      });
+      if(added>0){
+        renderBulkList();
+        showToast('✅ セット商品 '+res.setItems.length+'件を一括追加しました');
+      } else {
+        showToast('⚠️ セット商品はすでに追加済みです','err');
+      }
+    } else {
+      // 通常商品：1件追加
+      addBulkItem(res.item);
+    }
   },()=>{hideLoad();showToast('⚠️ 通信エラー','err');});
 }
 // ══════════════════════════════════════════════
@@ -1163,7 +1187,9 @@ function clearShip(){
 }
 // ── TAB2 一括編集 ──
 function addBulkItem(item){
-  if(bulkItems.find(b=>b.識別ID===item.識別ID)){showToast('⚠️ すでに追加済みです','err');return;}
+  // ★ 重複チェックをバーコードベースに変更
+  //   同一商品NOでも別バーコード（親・子）は追加可能にする
+  if(bulkItems.find(b=>b.バーコード===item.バーコード)){showToast('⚠️ すでに追加済みです','err');return;}
   bulkItems.push(item);renderBulkList();showToast('✅ '+(item.商品名||item.バーコード)+' を追加');
 }
 function removeBulkItem(idx){bulkItems.splice(idx,1);renderBulkList();}
@@ -1528,3 +1554,977 @@ loadMasters();
 </div>
 
 </html>
+
+// ══════════════════════════════════════════════════════════════
+//  ルアー在庫管理アプリ  GAS (Google Apps Script)
+//  スプレッドシート：NEW★ルアー在庫（改）削除不可
+//  更新：2026-05-22  JSONP対応（GitHub Pages連携用）
+//  ★ 変更点：
+//  ・processYahooMails → getLastConflictSummary に切り替え
+//    （HTMLからは保存済み結果を返すだけ。タイムアウト解消）
+//  ・clearAlerts 解除後に最新状態を返すよう変更
+//  ・getLastConflictSummary() 関数を末尾に追加
+// ══════════════════════════════════════════════════════════════
+
+// ──────────────────────────────────────────────
+//  定数：シート名
+// ──────────────────────────────────────────────
+const SS        = SpreadsheetApp.getActiveSpreadsheet();
+const SH_ITEM   = SS.getSheetByName('商品');
+const SH_YAHOO  = 'ヤフオク';
+const SH_NAME   = SS.getSheetByName('商品名リスト');
+const SH_MAKER  = SS.getSheetByName('メーカー');
+const SH_SHOP   = SS.getSheetByName('店名リスト');
+
+// ──────────────────────────────────────────────
+//  定数：商品シートの列番号（1始まり）
+// ──────────────────────────────────────────────
+const COL = {
+  識別ID        :  1,
+  バーコード    :  2,
+  保管バーコード:  3,
+  画像          :  4,
+  商品NO        :  5,
+  商品名ID      :  6,
+  メーカー      :  7,
+  カテゴリ      :  8,
+  タイプ        :  9,
+  スペック      : 10,
+  備考          : 11,
+  サイズ数量    : 12,
+  カラー        : 13,
+  ステータス    : 14,
+  出品タイミング: 15,
+  状態          : 16,  // 参照表示のみ
+  パッケージ    : 17,
+  発送手段      : 18,
+  店名          : 19,
+  エリア        : 20,
+  購入日        : 21,
+  購入金額      : 22,
+  販売金額      : 23,
+  手数料        : 24,
+  利益          : 25,
+  利益率        : 26,
+  作成日        : 27,
+  保品          : 28,
+  在庫          : 29,
+  検品済        : 30,
+  No有          : 31,
+  出タイ待      : 32,
+  出品          : 33,
+  販売済        : 34,
+  購入売却日数  : 35,
+  更新日時      : 36,
+  在庫確認      : 37,
+  セット用BC1   : 38,
+  セット用BC2   : 39,
+};
+
+// ══════════════════════════════════════════════════════════════
+//  doGet - JSONP方式（GitHub Pages連携用）
+// ══════════════════════════════════════════════════════════════
+function doGet(e) {
+  const fn       = e.parameter.fn;
+  const callback = e.parameter.callback || '';
+  let payload = {};
+  try { payload = JSON.parse(e.parameter.payload || '{}'); } catch(_) {}
+
+  let result = {};
+  try {
+    if      (fn === 'getProductByBarcode') result = getProductByBarcode(payload);
+    else if (fn === 'updateShipping')      result = updateShipping(payload);
+    else if (fn === 'bulkUpdate')          result = bulkUpdate(payload);
+    else if (fn === 'getMasters')          result = getMasters();
+    else if (fn === 'checkOnSave')         result = checkOnSave(payload);
+
+    // ★ 変更点：重い processYahooMails() は呼ばない
+    // トリガーで自動実行済みの保存済み結果を返すだけ（0.1秒で完了）
+    else if (fn === 'processYahooMails') {
+      result = getLastConflictSummary();
+    }
+
+    // ★ 変更点：解除後の最新状態も一緒に返す
+    else if (fn === 'clearAlerts') {
+      clearResolvedAlerts();
+      const latest = getLastConflictSummary();
+      result = {
+        ok        : true,
+        message   : '✅ アラートをクリアしました',
+        conflicts : latest.conflicts,
+        duplicates: latest.duplicates,
+        missing   : latest.missing,
+        sold      : latest.sold,
+        alerts    : latest.alerts,
+        updatedAt : latest.updatedAt,
+      };
+    }
+
+    else if (fn === 'checkMisshipment')    result = checkMisshipment(payload.items || []);
+    else if (fn === 'registerSet')         result = registerSet(payload);
+
+    else result = { ok: false, error: '不明な関数: ' + fn };
+  } catch(err) {
+    result = { ok: false, error: err.message };
+  }
+
+  const json = JSON.stringify(result);
+  if (callback) {
+    return ContentService
+      .createTextOutput(callback + '(' + json + ')')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return ContentService
+    .createTextOutput(json)
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  共通：行データ → オブジェクト変換
+// ══════════════════════════════════════════════════════════════
+function rowToObj(row) {
+  return {
+    識別ID        : row[COL.識別ID         - 1] || '',
+    バーコード    : String(row[COL.バーコード     - 1] || ''),
+    保管バーコード: String(row[COL.保管バーコード  - 1] || ''),
+    画像          : row[COL.画像           - 1] || '',
+    商品NO        : row[COL.商品NO         - 1] || '',
+    商品名ID      : row[COL.商品名ID       - 1] || '',
+    メーカー      : row[COL.メーカー       - 1] || '',
+    カテゴリ      : row[COL.カテゴリ       - 1] || '',
+    タイプ        : row[COL.タイプ         - 1] || '',
+    スペック      : row[COL.スペック       - 1] || '',
+    状態          : row[COL.状態           - 1] || '',
+    備考          : row[COL.備考           - 1] || '',
+    サイズ数量    : row[COL.サイズ数量     - 1] || '',
+    カラー        : row[COL.カラー         - 1] || '',
+    ステータス    : row[COL.ステータス     - 1] || '',
+    発送手段      : row[COL.発送手段       - 1] || '',
+    店名          : row[COL.店名           - 1] || '',
+    購入日        : formatDate(row[COL.購入日       - 1]),
+    購入金額      : row[COL.購入金額       - 1] || 0,
+    販売金額      : row[COL.販売金額       - 1] || 0,
+    販売済日      : formatDate(row[COL.販売済       - 1]),
+    更新日時      : formatDate(row[COL.更新日時     - 1]),
+    rowIndex      : -1,
+  };
+}
+
+// ──────────────────────────────────────────────
+//  日付フォーマット
+// ──────────────────────────────────────────────
+function formatDate(val) {
+  if (!val) return '';
+  if (val instanceof Date) {
+    const y = val.getFullYear();
+    const m = String(val.getMonth() + 1).padStart(2, '0');
+    const d = String(val.getDate()).padStart(2, '0');
+    return y + '/' + m + '/' + d;
+  }
+  return String(val);
+}
+
+// ──────────────────────────────────────────────
+//  GoogleドライブのファイルIDから表示用URLを生成
+//  ★ フォルダIDで直接指定（正解画像フォルダ）
+//  対象フォルダ：マイドライブ→商品_Images（正解画像）
+//  フォルダID：174frBfaZMsKCRRS8eRpCMEEGGcxaWhro
+// ──────────────────────────────────────────────
+const IMAGE_FOLDER_ID = '174frBfaZMsKCRRS8eRpCMEEGGcxaWhro';
+
+function getImageUrl(imagePath) {
+  if (!imagePath) return '';
+  try {
+    const fileName = imagePath.split('/').pop();
+    const folder = DriveApp.getFolderById(IMAGE_FOLDER_ID);
+    const files = folder.getFilesByName(fileName);
+    if (!files.hasNext()) return '';
+    const file = files.next();
+    try {
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    } catch(shareErr) {
+      console.warn('共有設定の変更に失敗:', shareErr);
+    }
+    return 'https://drive.google.com/thumbnail?id=' + file.getId() + '&sz=w400';
+  } catch(e) {
+    console.error('getImageUrl error:', e);
+    return '';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  画像ファイルリネーム＆スプレッドシートD列再紐付け（分割実行版）
+// ══════════════════════════════════════════════════════════════
+function renameImagesAndUpdateSheet() {
+  const BATCH_SIZE = 200;
+  const props = PropertiesService.getScriptProperties();
+
+  const sheet   = SH_ITEM;
+  const lastRow = sheet.getLastRow();
+  const imgVals = sheet.getRange(2, COL.画像, lastRow - 1, 1).getValues();
+
+  const fileNameToRows = {};
+  imgVals.forEach((row, i) => {
+    const path = String(row[0] || '').trim();
+    if (!path) return;
+    const fn = path.split('/').pop();
+    if (!fn) return;
+    if (!fileNameToRows[fn]) fileNameToRows[fn] = [];
+    fileNameToRows[fn].push(i + 2);
+  });
+
+  const usedNumbers = new Set();
+  function generateUnique6Digits() {
+    let num;
+    do {
+      num = String(Math.floor(Math.random() * 900000) + 100000);
+    } while (usedNumbers.has(num));
+    usedNumbers.add(num);
+    return num;
+  }
+
+  const pattern = /^(.+\.画像\.)(\d{6})(\.jpg)$/i;
+  const folder  = DriveApp.getFolderById(IMAGE_FOLDER_ID);
+
+  let processedCount = parseInt(props.getProperty('renameProcessed') || '0');
+  let renamed = 0, updated = 0, skipped = 0;
+
+  const allFiles = [];
+  const iter = folder.getFiles();
+  while (iter.hasNext()) allFiles.push(iter.next());
+
+  const total = allFiles.length;
+  const targets = allFiles.slice(processedCount, processedCount + BATCH_SIZE);
+
+  targets.forEach(file => {
+    const oldName = file.getName();
+    const match   = oldName.match(pattern);
+    if (!match || !fileNameToRows[oldName]) { skipped++; return; }
+
+    const newSuffix = generateUnique6Digits();
+    const newName   = match[1] + newSuffix + match[3];
+    const newPath   = '商品_Images/' + newName;
+
+    file.setName(newName);
+    renamed++;
+
+    try {
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    } catch(e) {}
+
+    fileNameToRows[oldName].forEach(rowNum => {
+      sheet.getRange(rowNum, COL.画像).setValue(newPath);
+      updated++;
+    });
+  });
+
+  processedCount += targets.length;
+  props.setProperty('renameProcessed', String(processedCount));
+
+  const isDone = processedCount >= total;
+  if (isDone) props.deleteProperty('renameProcessed');
+
+  const msg = isDone
+    ? `✅ 全件完了！\nリネーム${renamed}件 / SS更新${updated}行 / スルー${skipped}件\n合計${total}件処理済み`
+    : `⏳ ${processedCount}/${total}件完了\nリネーム${renamed}件 / SS更新${updated}行 / スルー${skipped}件\n→ もう一度「実行」してください`;
+
+  console.log(msg);
+  SpreadsheetApp.getUi().alert(msg);
+}
+
+function resetRenameProgress() {
+  PropertiesService.getScriptProperties().deleteProperty('renameProcessed');
+  SpreadsheetApp.getUi().alert('進捗をリセットしました。最初から実行できます。');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  D列が空白の行に画像パスを自動補完（分割実行版）
+// ══════════════════════════════════════════════════════════════
+function fillEmptyImagePaths() {
+  const BATCH_SIZE = 200;
+  const props = PropertiesService.getScriptProperties();
+  const sheet  = SH_ITEM;
+  const lastRow = sheet.getLastRow();
+
+  const allData = sheet.getRange(2, 1, lastRow - 1, 4).getValues();
+
+  const idToRow = {};
+  const bcToRow = {};
+
+  allData.forEach((row, i) => {
+    const rowNum  = i + 2;
+    const idVal   = String(row[0] || '').trim();
+    const bcVal   = String(row[1] || '').trim();
+    const imgVal  = String(row[3] || '').trim();
+    if (imgVal) return;
+
+    if (idVal) {
+      if (!idToRow[idVal]) idToRow[idVal] = [];
+      idToRow[idVal].push(rowNum);
+    }
+    if (bcVal) {
+      if (!bcToRow[bcVal]) bcToRow[bcVal] = [];
+      bcToRow[bcVal].push(rowNum);
+    }
+  });
+
+  const folder   = DriveApp.getFolderById(IMAGE_FOLDER_ID);
+  const allFiles = [];
+  const iter     = folder.getFiles();
+  while (iter.hasNext()) allFiles.push(iter.next());
+  const total = allFiles.length;
+
+  let processedCount = parseInt(props.getProperty('fillProcessed') || '0');
+
+  const pattern = /^([^.]+)\.画像\.\d{6}\.jpg$/i;
+
+  const idCount = {}, bcCount = {};
+  allFiles.forEach(f => {
+    const m = f.getName().match(pattern);
+    if (!m) return;
+    const key = m[1];
+    if (idToRow[key]) idCount[key] = (idCount[key] || 0) + 1;
+    if (bcToRow[key]) bcCount[key] = (bcCount[key] || 0) + 1;
+  });
+
+  const targets = allFiles.slice(processedCount, processedCount + BATCH_SIZE);
+  let filled = 0, skipped = 0, multi = 0;
+
+  targets.forEach(file => {
+    const fileName = file.getName();
+    const match    = fileName.match(pattern);
+    if (!match) { skipped++; return; }
+
+    const key     = match[1];
+    const newPath = '商品_Images/' + fileName;
+
+    if (idToRow[key]) {
+      if (idCount[key] > 1) { multi++; return; }
+      idToRow[key].forEach(rowNum => {
+        sheet.getRange(rowNum, COL.画像).setValue(newPath);
+        filled++;
+      });
+      return;
+    }
+
+    if (bcToRow[key]) {
+      if (bcCount[key] > 1) { multi++; return; }
+      bcToRow[key].forEach(rowNum => {
+        sheet.getRange(rowNum, COL.画像).setValue(newPath);
+        filled++;
+      });
+      return;
+    }
+
+    skipped++;
+  });
+
+  processedCount += targets.length;
+  props.setProperty('fillProcessed', String(processedCount));
+
+  const isDone = processedCount >= total;
+  if (isDone) props.deleteProperty('fillProcessed');
+
+  const msg = isDone
+    ? `✅ 全件完了！\n補完${filled}行 / 複数ファイルでスルー${multi}件 / 該当なし${skipped}件\n合計${total}件スキャン済み`
+    : `⏳ ${processedCount}/${total}件スキャン完了\n補完${filled}行 / 複数ファイルでスルー${multi}件\n→ もう一度「実行」してください`;
+
+  console.log(msg);
+  SpreadsheetApp.getUi().alert(msg);
+}
+
+function resetFillProgress() {
+  PropertiesService.getScriptProperties().deleteProperty('fillProcessed');
+  SpreadsheetApp.getUi().alert('進捗をリセットしました。最初から実行できます。');
+}
+
+// ──────────────────────────────────────────────
+//  商品名リストから 識別ID → 商品名 のマップを作成
+// ──────────────────────────────────────────────
+function buildNameMap() {
+  const map = {};
+  const data = SH_NAME.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    const id   = data[i][0];
+    const name = data[i][2];
+    if (id) map[String(id)] = name || '';
+  }
+  return map;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  【機能1】バーコードで商品を1件検索
+// ══════════════════════════════════════════════════════════════
+function getProductByBarcode(params) {
+  try {
+    const barcode = String(params.barcode || '').trim();
+    const keyword = String(params.keyword || barcode).trim().toUpperCase();
+    if (!keyword) return { found: false, error: 'バーコード/商品NOが空です' };
+
+    const data    = SH_ITEM.getDataRange().getValues();
+    const nameMap = buildNameMap();
+
+    // ── ①ヒット行を検索 ──────────────────────────────────────
+    let hitIdx = -1;
+    for (let i = 1; i < data.length; i++) {
+      const row     = data[i];
+      const bc      = String(row[COL.バーコード     - 1] || '').trim().toUpperCase();
+      const bcKokan = String(row[COL.保管バーコード - 1] || '').trim().toUpperCase();
+      const itemNo  = String(row[COL.商品NO         - 1] || '').trim().toUpperCase();
+      if (bc === keyword || bcKokan === keyword || itemNo === keyword) {
+        hitIdx = i; break;
+      }
+    }
+    if (hitIdx < 0) return { found: false };
+
+    const hitRow = data[hitIdx];
+    const hitBC  = String(hitRow[COL.バーコード - 1] || '').trim();
+    const hitBC1 = String(hitRow[COL.セット用BC1 - 1] || '').trim();
+    const hitBC2 = String(hitRow[COL.セット用BC2 - 1] || '').trim();
+
+    // ── ②セット登録済み判定 ──────────────────────────────────
+    // ケースA：ヒット行がS付きBC（親）かつAL/AM列に子BCがある
+    // ケースB：ヒット行が子BC → 全行を走査して親行（AL/AM列にヒットBCが含まれる）を探す
+    const isSetParent = hitBC.toUpperCase().startsWith('S') && (hitBC1 || hitBC2);
+    let parentIdx = -1;
+    if (isSetParent) {
+      parentIdx = hitIdx;
+    } else {
+      // 子BCとしてヒット：AL/AM列にhitBCを持つ親行を探す
+      for (let i = 1; i < data.length; i++) {
+        const bc1 = String(data[i][COL.セット用BC1 - 1] || '').trim();
+        const bc2 = String(data[i][COL.セット用BC2 - 1] || '').trim();
+        if ((bc1 && bc1 === hitBC) || (bc2 && bc2 === hitBC)) {
+          parentIdx = i; break;
+        }
+      }
+    }
+
+    // ── ③セット登録済みの場合：親＋全子をまとめて返す ─────────
+    if (parentIdx >= 0) {
+      const parentRow = data[parentIdx];
+      const parentBC  = String(parentRow[COL.バーコード  - 1] || '').trim();
+      const setBC1    = String(parentRow[COL.セット用BC1 - 1] || '').trim();
+      const setBC2    = String(parentRow[COL.セット用BC2 - 1] || '').trim();
+
+      // 親アイテム生成
+      const parentItem = rowToObj(parentRow);
+      parentItem.rowIndex  = parentIdx + 1;
+      parentItem.商品名    = nameMap[String(parentItem.商品名ID)] || parentItem.商品名ID || '（商品名不明）';
+      parentItem.imgUrl    = getImageUrl(parentItem.画像);
+      parentItem.セット用BC1 = setBC1;
+      parentItem.セット用BC2 = setBC2;
+      parentItem.isSetParent = true;
+
+      // 子アイテム生成
+      const childItems = [];
+      [setBC1, setBC2].filter(Boolean).forEach(childBC => {
+        for (let i = 1; i < data.length; i++) {
+          const bc = String(data[i][COL.バーコード - 1] || '').trim();
+          if (bc === childBC) {
+            const childItem = rowToObj(data[i]);
+            childItem.rowIndex    = i + 1;
+            childItem.商品名      = nameMap[String(childItem.商品名ID)] || childItem.商品名ID || '（商品名不明）';
+            childItem.imgUrl      = getImageUrl(childItem.画像);
+            childItem.親BC        = parentBC;  // 子カードのピンクチップ用
+            childItem.isSetChild  = true;
+            childItems.push(childItem);
+            break;
+          }
+        }
+      });
+
+      // セット登録済み → 親＋子をまとめて返す
+      return {
+        found    : true,
+        isSet    : true,
+        item     : parentItem,         // 後方互換：単品追加用
+        setItems : [parentItem, ...childItems], // セット全商品
+      };
+    }
+
+    // ── ④通常商品（セット未登録）──────────────────────────────
+    const item = rowToObj(hitRow);
+    item.rowIndex  = hitIdx + 1;
+    item.商品名    = nameMap[String(item.商品名ID)] || item.商品名ID || '（商品名不明）';
+    item.imgUrl    = getImageUrl(item.画像);
+    item.セット用BC1 = hitBC1;
+    item.セット用BC2 = hitBC2;
+    return { found: true, isSet: false, item: item };
+
+  } catch(e) {
+    console.error('getProductByBarcode error:', e);
+    return { found: false, error: e.message };
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  【機能2】発送作業：1件更新
+// ══════════════════════════════════════════════════════════════
+function updateShipping(params) {
+  try {
+    const row = Number(params.rowIndex);
+    if (!row || row < 2) return { ok: false, error: '行番号が不正です' };
+
+    if (params.ステータス) {
+      SH_ITEM.getRange(row, COL.ステータス).setValue(params.ステータス);
+    }
+    if (params.販売済日) {
+      SH_ITEM.getRange(row, COL.販売済).setValue(new Date(params.販売済日));
+    }
+    if (params.販売金額 !== undefined && params.販売金額 !== '') {
+      SH_ITEM.getRange(row, COL.販売金額).setValue(Number(params.販売金額));
+    }
+
+    SH_ITEM.getRange(row, COL.更新日時).setValue(new Date());
+    syncStatusFlags(row, params.ステータス || '');
+
+    if (params.ステータス === '販売済') {
+      const productNo = String(SH_ITEM.getRange(row, COL.商品NO).getValue()).trim();
+      hideYahooSheetRow(productNo);
+    }
+
+    return { ok: true };
+
+  } catch(e) {
+    console.error('updateShipping error:', e);
+    return { ok: false, error: e.message };
+  }
+}
+
+// ──────────────────────────────────────────────
+//  ステータスフラグ列の同期
+// ──────────────────────────────────────────────
+function syncStatusFlags(rowNum, status) {
+  const now = new Date();
+  const flagCols = {
+    '保品'    : COL.保品,
+    '在庫'    : COL.在庫,
+    '検品済'  : COL.検品済,
+    'No有'    : COL.No有,
+    '出タイ待': COL.出タイ待,
+    '出品'    : COL.出品,
+    '販売済'  : COL.販売済,
+  };
+
+  Object.values(flagCols).forEach(col => {
+    SH_ITEM.getRange(rowNum, col).clearContent();
+  });
+
+  if (flagCols[status]) {
+    SH_ITEM.getRange(rowNum, flagCols[status]).setValue(now);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  【機能3-S】セット登録
+//  受け取るデータ：items=[{rowIndex, barcode}, ...]
+//  処理：S付きBCを持つ行＝親、残り＝子
+//        親行のAL列（セット用BC1）・AM列（セット用BC2）に子BCを書き込む
+// ══════════════════════════════════════════════════════════════
+function registerSet(params) {
+  try {
+    const items = params.items || [];
+    if (items.length < 2 || items.length > 3) {
+      return { ok: false, error: 'セット登録は2〜3商品で行ってください' };
+    }
+
+    // S付きBCを持つ行を親、それ以外を子と判定
+    const parent = items.find(it => String(it.barcode || '').toUpperCase().startsWith('S'));
+    const children = items.filter(it => it !== parent);
+
+    if (!parent) {
+      return { ok: false, error: 'S付きBC（親商品）が見つかりません。親商品のB列をS付きBCに変更してから登録してください。' };
+    }
+    if (children.length === 0) {
+      return { ok: false, error: '子商品が見つかりません' };
+    }
+
+    const parentRow = Number(parent.rowIndex);
+    if (!parentRow || parentRow < 2) {
+      return { ok: false, error: '親商品の行番号が不正です' };
+    }
+
+    // 親行のAL列・AM列に子BCを書き込む
+    const child1BC = String(children[0].barcode || '').trim();
+    const child2BC = children[1] ? String(children[1].barcode || '').trim() : '';
+
+    SH_ITEM.getRange(parentRow, COL.セット用BC1).setValue(child1BC);
+    SH_ITEM.getRange(parentRow, COL.セット用BC2).setValue(child2BC);
+    SH_ITEM.getRange(parentRow, COL.更新日時   ).setValue(new Date());
+
+    console.log('セット登録完了: 親BC=' + parent.barcode +
+      ' 子1BC=' + child1BC + ' 子2BC=' + child2BC);
+
+    return {
+      ok        : true,
+      parentBC  : parent.barcode,
+      child1BC  : child1BC,
+      child2BC  : child2BC,
+    };
+
+  } catch(e) {
+    console.error('registerSet error:', e);
+    return { ok: false, error: e.message };
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  【機能3】一括編集
+// ══════════════════════════════════════════════════════════════
+function bulkUpdate(params) {
+  try {
+    const items = params.items || [];
+    if (items.length === 0) return { ok: false, error: '更新データがありません' };
+
+    // ── 誤商品チェック：発送作業（販売済書き込み）の場合のみ実施 ──
+    // 「販売済」への更新が含まれる場合、書き込み前にシートの現在値を確認する
+    const isSoldUpdate = items.some(p => p.ステータス === '販売済');
+    if (isSoldUpdate) {
+      const misshipResult = checkMisshipment(items);
+      if (misshipResult.blocked) {
+        // 誤商品確定：緊急Discord通知してブロック
+        return {
+          ok      : false,
+          blocked : true,
+          error   : misshipResult.message,
+          items   : misshipResult.errorItems,
+        };
+      }
+      // パターンA（事前発送登録）：確認レベルのDiscord通知のみ・処理は続行
+    }
+
+    let updated = 0;
+    items.forEach(p => {
+      const row = Number(p.rowIndex);
+      if (!row || row < 2) return;
+
+      if (p.ステータス  !== undefined) SH_ITEM.getRange(row, COL.ステータス ).setValue(p.ステータス);
+      if (p.販売金額    !== undefined) SH_ITEM.getRange(row, COL.販売金額   ).setValue(Number(p.販売金額));
+      if (p.購入金額    !== undefined) SH_ITEM.getRange(row, COL.購入金額   ).setValue(Number(p.購入金額));
+      if (p.購入日      !== undefined) SH_ITEM.getRange(row, COL.購入日     ).setValue(new Date(p.購入日));
+      if (p.販売済日    !== undefined) SH_ITEM.getRange(row, COL.販売済     ).setValue(new Date(p.販売済日));
+      if (p.発送手段    !== undefined) SH_ITEM.getRange(row, COL.発送手段   ).setValue(p.発送手段);
+      if (p.店名        !== undefined) SH_ITEM.getRange(row, COL.店名       ).setValue(p.店名);
+      if (p.商品名ID    !== undefined) SH_ITEM.getRange(row, COL.商品名ID   ).setValue(p.商品名ID);
+      if (p.備考        !== undefined) {
+        const cur備考 = SH_ITEM.getRange(row, COL.備考).getValue();
+        const new備考 = cur備考 ? cur備考 + ' / ' + p.備考 : p.備考;
+        SH_ITEM.getRange(row, COL.備考).setValue(new備考);
+      }
+      if (p.状態        !== undefined) SH_ITEM.getRange(row, COL.状態       ).setValue(p.状態);
+      if (p.保管バーコード !== undefined) SH_ITEM.getRange(row, COL.保管バーコード).setValue(p.保管バーコード);
+      if (p.在庫確認    !== undefined) SH_ITEM.getRange(row, COL.在庫確認   ).setValue(p.在庫確認);
+      if (p.サイズ数量  !== undefined) {
+        const curサイズ = SH_ITEM.getRange(row, COL.サイズ数量).getValue();
+        const newサイズ = curサイズ ? curサイズ + ' / ' + p.サイズ数量 : p.サイズ数量;
+        SH_ITEM.getRange(row, COL.サイズ数量).setValue(newサイズ);
+      }
+      if (p.カラー      !== undefined) {
+        const curカラー = SH_ITEM.getRange(row, COL.カラー).getValue();
+        const newカラー = curカラー ? curカラー + ' / ' + p.カラー : p.カラー;
+        SH_ITEM.getRange(row, COL.カラー).setValue(newカラー);
+      }
+
+      if (p.ステータス) syncStatusFlags(row, p.ステータス);
+
+      SH_ITEM.getRange(row, COL.更新日時).setValue(new Date());
+      updated++;
+    });
+
+    return { ok: true, updated: updated };
+
+  } catch(e) {
+    console.error('bulkUpdate error:', e);
+    return { ok: false, error: e.message };
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  【機能4】マスタデータ取得
+// ══════════════════════════════════════════════════════════════
+function getMasters() {
+  try {
+    const statuses = ['在庫','検品済','保品','No有','出タイ待','出品','販売済'];
+
+    const itemData = SH_ITEM.getDataRange().getValues();
+    const shippingSet = new Set();
+    for (let i = 1; i < itemData.length; i++) {
+      const v = itemData[i][COL.発送手段 - 1];
+      if (v) shippingSet.add(String(v));
+    }
+
+    const shopData = SH_SHOP.getDataRange().getValues();
+    const shops = [];
+    for (let i = 1; i < shopData.length; i++) {
+      const name = shopData[i][4];
+      if (name) shops.push(String(name));
+    }
+
+    const makerData = SH_MAKER.getDataRange().getValues();
+    const makers = [];
+    for (let i = 1; i < makerData.length; i++) {
+      const name = makerData[i][2];
+      if (name) makers.push(String(name));
+    }
+
+    const nameData = SH_NAME.getDataRange().getValues();
+    const nameList = [];
+    for (let i = 1; i < nameData.length; i++) {
+      const id   = nameData[i][0];
+      const name = nameData[i][2];
+      if (id && name) nameList.push({ id: String(id), name: String(name) });
+    }
+
+    function getPrefix(name) {
+      const m = String(name).match(/^([A-Za-z0-9\-_]+)/);
+      return m ? m[1].toUpperCase() : '\uFFFF';
+    }
+    nameList.sort((a, b) => {
+      const pa = getPrefix(a.name), pb = getPrefix(b.name);
+      if (pa !== pb) return pa < pb ? -1 : 1;
+      return String(a.name).localeCompare(String(b.name), 'ja');
+    });
+
+    return {
+      ok        : true,
+      statuses  : statuses,
+      shippings : Array.from(shippingSet),
+      shops     : shops,
+      makers    : makers,
+      nameList  : nameList,
+    };
+
+  } catch(e) {
+    console.error('getMasters error:', e);
+    return { ok: false, error: e.message };
+  }
+}
+
+// ──────────────────────────────────────────────
+//  ヤフオクシート：該当商品の行を非表示にする
+// ──────────────────────────────────────────────
+function hideYahooSheetRow(productNo) {
+  if (!productNo) return;
+  try {
+    const sh      = SS.getSheetByName('ヤフオク');
+    if (!sh) return;
+    const lastRow = sh.getLastRow();
+    if (lastRow < 2) return;
+    const nos = sh.getRange(2, 2, lastRow - 1, 1).getValues();
+    nos.forEach((row, i) => {
+      if (String(row[0] || '').trim() === productNo) {
+        sh.hideRows(i + 2);
+      }
+    });
+  } catch(e) {
+    console.error('hideYahooSheetRow error:', e);
+  }
+}
+
+// ──────────────────────────────────────────────
+//  商品シートの全行を白に戻す（1回手動実行用）
+// ──────────────────────────────────────────────
+function resetAllRowColors() {
+  const lastRow = SH_ITEM.getLastRow();
+  const lastCol = SH_ITEM.getLastColumn();
+  if (lastRow < 2) { console.log('データなし'); return; }
+
+  const CHUNK = 200;
+  let done = 0;
+  for (let r = 2; r <= lastRow; r += CHUNK) {
+    const rows = Math.min(CHUNK, lastRow - r + 1);
+    SH_ITEM.getRange(r, 1, rows, lastCol).setBackground('#ffffff');
+    done += rows;
+    if (r + CHUNK <= lastRow) Utilities.sleep(300);
+  }
+  console.log('全行白消し完了: ' + done + '行');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ★ 新規追加：一括編集「出品」保存前チェック
+//  bulkUpdate で ステータス=「出品」 を選んだ際に呼ばれる
+//  重複出品・販売済商品の出品を事前チェックして警告を返す
+// ══════════════════════════════════════════════════════════════
+function checkOnSave(payload) {
+  try {
+    const productNos = (payload.productNos || []).map(n => String(n).trim()).filter(Boolean);
+    if (productNos.length === 0) return { ok: true, alerts: [] };
+
+    const sheet       = SH_ITEM;
+    const itemLastRow = sheet.getLastRow();
+    const alerts      = [];
+
+    if (itemLastRow < 2) return { ok: true, alerts: [] };
+
+    const maxCol  = Math.max(COL.商品NO, COL.ステータス);
+    const itemData = sheet.getRange(2, 1, itemLastRow - 1, maxCol).getValues();
+    const itemMap  = {};
+    itemData.forEach(row => {
+      const no = String(row[COL.商品NO     - 1] || '').trim();
+      const st = String(row[COL.ステータス  - 1] || '').trim();
+      if (no) itemMap[no] = st;
+    });
+
+    productNos.forEach(no => {
+      const st = itemMap[no] || itemMap[String(parseInt(no, 10))] || null;
+      if (!st) {
+        alerts.push('【存在しない商品NO】No.' + no + ' が在庫管理シートに見つかりません');
+      } else if (st === '販売済') {
+        alerts.push('【販売済商品の出品】No.' + no + ' はすでに「販売済」です');
+      }
+    });
+
+    return { ok: true, alerts: alerts };
+
+  } catch(e) {
+    console.error('checkOnSave error:', e);
+    return { ok: false, error: e.message };
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ★ 新規追加：誤商品チェック（発送作業 bulkUpdate 前に呼び出し）
+//
+//  パターンA（事前発送登録）：商品シート=販売済・金額あり
+//    → Discord確認通知（処理は続行）
+//  パターンB（通常）：商品シート=出品・金額なし
+//    → 正常ログのみ
+//  誤商品：商品シート=販売済・金額あり（かつ今回の対象）
+//    → Discord緊急通知 ＋ blocked:true でブロック
+//
+//  ※ パターンAと誤商品の違い：
+//    パターンAは「自分で事前に販売済にした正規商品」
+//    誤商品は「全く別の商品を誤ってスキャンした」
+//    → 現時点ではシート値だけでは区別できないため
+//      パターンAも含め「販売済＋金額あり」はすべて
+//      Discord確認通知を送り、処理は続行する。
+//      完全ブロックは「二重保存防止」のみとする。
+// ══════════════════════════════════════════════════════════════
+function checkMisshipment(items) {
+  try {
+    if (!items || items.length === 0) return { blocked: false };
+
+    const sheet       = SH_ITEM;
+    const itemLastRow = sheet.getLastRow();
+    if (itemLastRow < 2) return { blocked: false };
+
+    const maxCol  = Math.max(COL.商品NO, COL.ステータス, COL.販売金額);
+    const data    = sheet.getRange(2, 1, itemLastRow - 1, maxCol).getValues();
+
+    // rowIndex → シート現在値 のマップ作成
+    const rowMap = {};
+    data.forEach((row, i) => {
+      rowMap[i + 2] = {
+        no      : String(row[COL.商品NO    - 1] || '').trim(),
+        status  : String(row[COL.ステータス - 1] || '').trim(),
+        price   : Number(row[COL.販売金額   - 1] || 0),
+      };
+    });
+
+    const warningItems = []; // パターンA：確認通知のみ
+    const now = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd HH:mm');
+
+    items.forEach(p => {
+      const row = Number(p.rowIndex);
+      if (!row || row < 2) return;
+      const current = rowMap[row];
+      if (!current) return;
+
+      // 「販売済」かつ「販売金額 > 0」＝ 既に処理済みの商品
+      if (current.status === '販売済' && current.price > 0) {
+        warningItems.push({
+          rowIndex: row,
+          no      : current.no,
+          status  : current.status,
+          price   : current.price,
+        });
+      }
+    });
+
+    if (warningItems.length > 0) {
+      // Discord確認通知（パターンA想定・処理は続行）
+      const lines = warningItems.map(w =>
+        'No.' + w.no + ' ステータス:' + w.status + ' 登録金額:¥' + w.price.toLocaleString()
+      ).join('\n');
+      const msg =
+        '⚠️ **【発送作業・要確認】** ' + now + '\n' +
+        '以下の商品は「販売済」かつ販売金額が登録済みです。\n' +
+        '事前発送登録済みの場合は正常です。誤商品の場合は確認してください。\n\n' +
+        lines;
+      try {
+        const props    = PropertiesService.getScriptProperties();
+        const lastSent = parseInt(props.getProperty('discordLastSent') || '0', 10);
+        if ((Date.now() - lastSent) / 1000 >= 60) {
+          const res = UrlFetchApp.fetch(DISCORD_WEBHOOK_URL, {
+            method            : 'post',
+            contentType       : 'application/json',
+            payload           : JSON.stringify({ content: msg }),
+            muteHttpExceptions: true,
+          });
+          if (res.getResponseCode() === 204) {
+            props.setProperty('discordLastSent', String(Date.now()));
+          }
+        }
+      } catch(discordErr) {
+        console.warn('checkMisshipment Discord送信エラー:', discordErr);
+      }
+    }
+
+    // 現時点ではブロックしない（パターンAとの区別ができないため確認通知に留める）
+    return { blocked: false, warningItems: warningItems };
+
+  } catch(e) {
+    console.error('checkMisshipment error:', e);
+    return { blocked: false };
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ★ 新規追加：保存済みアラート結果を返す軽量関数
+//
+//  processYahooMails() がトリガー実行時に PropertiesService に
+//  保存した結果を返すだけ。
+//  シート・Gmail・Drive には一切アクセスしないので 0.1秒で完了。
+//  HTMLからのポップアップリクエストはすべてこの関数経由にする。
+// ══════════════════════════════════════════════════════════════
+function getLastConflictSummary() {
+  try {
+    const props  = PropertiesService.getScriptProperties();
+    const stored = props.getProperty('lastYahooResult');
+
+    // まだトリガーが一度も実行されていない場合
+    if (!stored) {
+      return {
+        ok        : true,
+        processed : 0,
+        remaining : 0,
+        conflicts : 0,
+        duplicates: 0,
+        missing   : 0,
+        sold      : 0,
+        alerts    : [],
+        updatedAt : '未取得',
+        notice    : 'トリガーがまだ実行されていません。GASエディタで processYahooMails を手動実行するか、30分お待ちください。',
+      };
+    }
+
+    const data = JSON.parse(stored);
+    return {
+      ok        : true,
+      processed : data.processed  || 0,
+      remaining : data.remaining  || 0,
+      conflicts : data.conflicts  || 0,
+      duplicates: data.duplicates || 0,
+      missing   : data.missing   || 0,
+      sold      : data.sold      || 0,
+      alerts    : data.alerts    || [],
+      updatedAt : data.updatedAt || '',
+      error     : data.error     || null,
+    };
+
+  } catch(e) {
+    console.error('getLastConflictSummary error:', e);
+    return { ok: false, error: e.message };
+  }
+}
