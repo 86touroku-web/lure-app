@@ -1325,6 +1325,12 @@ function clearBulk(){
     if(btn)btn.classList.remove('active');
     if(field)field.style.display='none';
   });
+  // バッジ表示エリアをクリア
+  const activeFieldsEl = document.getElementById('bulk-active-fields');
+  if(activeFieldsEl) activeFieldsEl.innerHTML='';
+  updateActiveFieldBadges();
+  // ステータスチップのUI選択状態をリセット
+  buildStatusChips('bulk-status-chips',ALL_STATUSES,()=>bulkStatus,s=>{bulkStatus=s;});
   renderBulkList();
 }
 // ── 入力項目選択ポップアップ ──────────────────────────────────
