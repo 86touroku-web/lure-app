@@ -121,8 +121,10 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
   margin-bottom:0!important;
   flex-shrink:0;
 }
-/* タイトルテキスト（発送作業／一括編集） */
+/* タイトルテキスト（発送作業／一括編集）：残りスペースを占めて中央寄せ */
 .search-card-title{
+  flex:1;
+  text-align:center;
   font-size:2.4rem;
   font-weight:900;
   color:var(--text-dark);
@@ -551,7 +553,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 
       <!-- ①保管場所スキャン（常時表示） -->
       <div class="form-row">
-        <button class="big-btn btn-scan" style="width:100%;margin-bottom:.4rem;" onclick="startScan('bulk-storage')">📷 保管場所をスキャン</button>
+        <button class="big-btn btn-scan" style="width:100%;margin-bottom:.4rem;border:2px solid #ffffff;" onclick="startScan('bulk-storage')">📷 保管場所をスキャン</button>
         <div id="bulk-storage-val" style="display:none;min-height:3.6rem;background:rgba(0,0,0,.25);border-radius:var(--r);align-items:center;justify-content:center;font-size:var(--fs-md);font-weight:700;color:#fff;padding:.4rem 1rem;letter-spacing:.05em;"></div>
       </div>
 
@@ -562,7 +564,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 
       <!-- ③入力項目ボタン（タップでチェックボックスポップアップ） -->
       <button class="big-btn" id="sel-btn-set"
-        style="width:100%;background:linear-gradient(135deg,#1976d2,#1565c0);color:#fff;font-size:var(--fs-md);font-weight:800;height:var(--h-btn);border-radius:var(--r);margin-bottom:.6rem;"
+        style="width:100%;background:linear-gradient(135deg,#1976d2,#1565c0);color:#fff;font-size:var(--fs-md);font-weight:800;height:var(--h-btn);border-radius:var(--r);margin-bottom:.6rem;border:2px solid #ffffff;"
         onclick="openFieldSelectPopup()">📋 入力項目</button>
 
       <!-- 選択中の項目バッジ表示 -->
@@ -624,8 +626,8 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
       </div>
     </div>
     <div class="btn-row" style="margin-bottom:1rem">
-      <button class="big-btn btn-save"   onclick="saveBulk()">💾 一括保存</button>
-      <button class="big-btn btn-danger" onclick="clearBulk()">🗑 全クリア</button>
+      <button class="big-btn btn-save"   style="border:2px solid #ffffff;" onclick="saveBulk()">💾 一括保存</button>
+      <button class="big-btn btn-danger" style="border:2px solid #ffffff;" onclick="clearBulk()">🗑 全クリア</button>
     </div>
   </div>
 </div>
