@@ -1132,7 +1132,8 @@ let shipSellPrices={};
 function addShipItem(item){
   if(shipItems.find(s=>s.識別ID===item.識別ID)){showToast('⚠️ すでに追加済みです','err');return;}
   shipItems.push(item);
-  shipSellPrices[item.識別ID]=0;
+  // ★ 修正：商品シートの販売金額（落札金額）を初期値としてセット
+  shipSellPrices[item.識別ID] = Number(item.販売金額||0);
   renderShipList();
   showToast('✅ '+(item.商品名||item.バーコード)+' を追加');
 }
