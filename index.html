@@ -1110,8 +1110,23 @@ function fetchProduct(keyword,mode){
     if(!res||!res.found){showToast('⚠️ 未登録のバーコード / 商品NOです','err');return;}
 
     if(mode==='ship'){
-      // 発送作業：単品のみ（セット対応なし）
-      addShipItem(res.item);
+      // 発送作業：セット登録済みの場合は全商品を自動一括追加
+      if(res.isSet && res.setItems && res.setItems.length > 0){
+        let added=0;
+        res.setItems.forEach(item=>{
+          if(!shipItems.find(s=>s.バーコード===item.バーコード)){
+            addShipItem(item); added++;
+          }
+        });
+        if(added>0){
+          showToast('✅ セット商品 '+res.setItems.length+'件を一括追加しました');
+        } else {
+          showToast('⚠️ セット商品はすでに追加済みです','err');
+        }
+      } else {
+        // 通常商品：1件追加
+        addShipItem(res.item);
+      }
       return;
     }
 
