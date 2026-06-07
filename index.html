@@ -116,8 +116,8 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
   color:#fcfcfc;
 }
 .bottom-tab-btn.active-bulk{
-  background:#23f762;
-  color:#0a0a0a;
+  background:#f72386;
+  color:#fcfcfc;
 }
 .page-title{text-align:center;font-size:var(--fs-lg);font-weight:800;color:#fff;margin-bottom:.8rem;}
 /* ── ブロックカード ── */
@@ -609,7 +609,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 ════════════════════════════════ -->
 <div class="screen" id="screen-bulk">
   <!-- リアルタイムチェックボタン（商品カードがない時のみ表示） -->
-  <div id="bulk-realtime-wrap">
+  <div id="bulk-realtime-wrap" style="display:none!important;">
     <button class="btn-realtime" onclick="openYahooPopup()">
       🔍 リアルタイム・チェック
     </button>
@@ -1287,7 +1287,7 @@ function renderShipList(){
   const count=shipItems.length;
   const shipCountEl=document.getElementById('ship-count');
   if(count===0){shipCountEl.style.display='none';shipCountEl.textContent='';}
-  else{shipCountEl.style.display='';shipCountEl.textContent=count+'件 追加済み';}
+  else{shipCountEl.style.display='none';shipCountEl.textContent='';}
   document.getElementById('ship-empty').style.display=count===0?'block':'none';
   document.getElementById('ship-form').style.display=count>0?'block':'none';
   listEl.innerHTML='';
