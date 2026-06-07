@@ -101,12 +101,13 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
   flex:1;
   height:4.2rem;
   border-radius:var(--r);
-  border:none;
+  border:2px solid #ffffff;
   cursor:pointer;
   font-size:var(--fs-md);
   font-weight:900;
   letter-spacing:.05em;
   transition:background .15s, color .15s;
+  box-shadow:0 0 0 2px rgba(255,255,255,.4);
   /* 非選択時（消灯） */
   background:#a6ada9;
   color:#0a0a0a;
@@ -273,10 +274,10 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
   margin-bottom:.8rem;
 }
 .search-right{display:contents;}
-/* ── 固定フッター 2行目（スキャン・入力・追加） ── */
+/* ── 固定フッター 2行目（スキャン・追加・入力 25:25:50） ── */
 .footer-row2{
   display:grid;
-  grid-template-columns:9rem 1fr 9rem;
+  grid-template-columns:1fr 1fr 2fr;
   gap:.5rem;
   margin-bottom:.5rem;
 }
@@ -286,6 +287,8 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 .footer-scan-btn{
   font-size:var(--fs-md)!important;
   font-weight:900!important;
+  border:2px solid #ffffff!important;
+  box-shadow:0 0 0 2px rgba(255,255,255,.4)!important;
 }
 /* 追加ボタン：紫 */
 .footer-add-btn{
@@ -294,6 +297,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
   font-size:var(--fs-md)!important;
   font-weight:900!important;
   border:2px solid #ffffff!important;
+  box-shadow:0 0 0 2px rgba(255,255,255,.4)!important;
 }
 /* ── 固定フッター 3行目（一括保存・全クリア） ── */
 .footer-row3{
@@ -302,7 +306,11 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
   gap:.5rem;
   margin-bottom:0;
 }
-.footer-row3 .big-btn{ height:var(--h-btn); border:2px solid #ffffff!important; }
+.footer-row3 .big-btn{
+  height:var(--h-btn);
+  border:2px solid #ffffff!important;
+  box-shadow:0 0 0 2px rgba(255,255,255,.4)!important;
+}
 .product-layout{display:flex;gap:.8rem;align-items:flex-start;}
 /* 画像：拡大（紺丸サイズ） */
 .product-img-col{flex:0 0 13rem;}
@@ -728,16 +736,16 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
     <button class="bottom-tab-btn active-ship" id="tab-ship" onclick="changeTab('ship')">🚚 発送作業</button>
     <button class="bottom-tab-btn" id="tab-bulk" onclick="changeTab('bulk')">📝 一括編集</button>
   </div>
-  <!-- 2行目：スキャン | バーコード入力 | 追加 -->
+  <!-- 2行目：スキャン | 追加 | バーコード入力（25:25:50） -->
   <div class="footer-row2">
     <button class="big-btn btn-scan footer-scan-btn" onclick="footerScan()">📷 スキャン</button>
+    <button class="big-btn footer-add-btn" onclick="footerAdd()">🔍 追加</button>
     <input type="text" class="inp search-inp-txt footer-inp" id="footer-search-input"
            inputmode="numeric" autocomplete="off" autocorrect="off"
            autocapitalize="characters" spellcheck="false"
            placeholder="バーコード / 商品NO"
            oninput="this.value=this.value.replace(/[^A-Za-z0-9\-]/g,'').toUpperCase()"
            onkeydown="if(event.key==='Enter'){footerAdd()}">
-    <button class="big-btn footer-add-btn" onclick="footerAdd()">🔍 追加</button>
   </div>
   <!-- 3行目：一括保存 | 全クリア -->
   <div class="footer-row3">
@@ -1291,9 +1299,8 @@ function renderShipList(){
   document.getElementById('ship-empty').style.display=count===0?'block':'none';
   document.getElementById('ship-form').style.display=count>0?'block':'none';
   listEl.innerHTML='';
-  // ⑤ 逆順表示（最新追加が上）・番号は追加順のまま
-  [...shipItems].reverse().forEach((item,revIdx)=>{
-    const idx=shipItems.length-1-revIdx;
+  // 正順表示（新しく追加した商品が下）
+  shipItems.forEach((item,idx)=>{
     const card=document.createElement('div');
     card.className='ship-card';
     card.innerHTML=buildItemCardHTML(item,idx,'ship');
@@ -1386,11 +1393,10 @@ function renderBulkList(){
   document.getElementById('bulk-form').style.display=count>0?'block':'none';
   // 商品カードがある時はボタン非表示・ない時は表示
   const rtWrap=document.getElementById('bulk-realtime-wrap');
-  if(rtWrap)rtWrap.style.display=count===0?'block':'none';
+  if(rtWrap)rtWrap.style.display='none';
   listEl.innerHTML='';
-  // ⑤ 逆順表示（最新追加が上）・番号は追加順のまま
-  [...bulkItems].reverse().forEach((item,revIdx)=>{
-    const idx=bulkItems.length-1-revIdx;
+  // 正順表示（新しく追加した商品が下）
+  bulkItems.forEach((item,idx)=>{
     const card=document.createElement('div');
     card.className='ship-card';
     card.innerHTML=buildItemCardHTML(item,idx,'bulk');
