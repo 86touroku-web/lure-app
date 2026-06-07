@@ -273,7 +273,36 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
   margin-bottom:.8rem;
 }
 .search-right{display:contents;}
-/* ── B: 商品情報ブロック ── */
+/* ── 固定フッター 2行目（スキャン・入力・追加） ── */
+.footer-row2{
+  display:grid;
+  grid-template-columns:9rem 1fr 9rem;
+  gap:.5rem;
+  margin-bottom:.5rem;
+}
+.footer-row2 .big-btn{ height:var(--h-inp); }
+.footer-row2 .inp{ height:var(--h-inp); }
+/* スキャンボタン */
+.footer-scan-btn{
+  font-size:var(--fs-md)!important;
+  font-weight:900!important;
+}
+/* 追加ボタン：紫 */
+.footer-add-btn{
+  background:linear-gradient(135deg,#a92bfc,#7b1fa2)!important;
+  color:#fcfcfc!important;
+  font-size:var(--fs-md)!important;
+  font-weight:900!important;
+  border:2px solid #ffffff!important;
+}
+/* ── 固定フッター 3行目（一括保存・全クリア） ── */
+.footer-row3{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:.5rem;
+  margin-bottom:0;
+}
+.footer-row3 .big-btn{ height:var(--h-btn); border:2px solid #ffffff!important; }
 .product-layout{display:flex;gap:.8rem;align-items:flex-start;}
 /* 画像：拡大（紺丸サイズ） */
 .product-img-col{flex:0 0 13rem;}
@@ -694,33 +723,26 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 
 <!-- 固定フッター：タブ切り替え＋共通操作パネル -->
 <div class="bottom-panel">
-  <!-- タブ切り替えボタン行 -->
+  <!-- 1行目：タブ切り替えボタン -->
   <div class="bottom-tab-row">
     <button class="bottom-tab-btn active-ship" id="tab-ship" onclick="changeTab('ship')">🚚 発送作業</button>
     <button class="bottom-tab-btn" id="tab-bulk" onclick="changeTab('bulk')">📝 一括編集</button>
   </div>
-  <!-- 共通操作行：スキャン | 入力＋追加 | クリア -->
-  <div class="search-block search-block-3col" style="margin-bottom:.5rem;">
-    <div class="scan-col">
-      <button class="big-btn btn-scan search-scan-btn" id="footer-scan-btn" onclick="footerScan()">📷<br>スキャン</button>
-    </div>
-    <div class="search-mid-col">
-      <input type="text" class="inp search-inp-txt" id="footer-search-input"
-             inputmode="numeric" autocomplete="off" autocorrect="off"
-             autocapitalize="characters" spellcheck="false"
-             placeholder="バーコード / 商品NO"
-             oninput="this.value=this.value.replace(/[^A-Za-z0-9\-]/g,'').toUpperCase()"
-             onkeydown="if(event.key==='Enter'){footerAdd()}">
-      <button class="big-btn search-add-btn footer-add-btn" id="footer-add-btn" onclick="footerAdd()">🔍 追加</button>
-    </div>
-    <div class="clear-col">
-      <button class="big-btn search-clear-btn" onclick="footerClear()">クリア</button>
-    </div>
+  <!-- 2行目：スキャン | バーコード入力 | 追加 -->
+  <div class="footer-row2">
+    <button class="big-btn btn-scan footer-scan-btn" onclick="footerScan()">📷 スキャン</button>
+    <input type="text" class="inp search-inp-txt footer-inp" id="footer-search-input"
+           inputmode="numeric" autocomplete="off" autocorrect="off"
+           autocapitalize="characters" spellcheck="false"
+           placeholder="バーコード / 商品NO"
+           oninput="this.value=this.value.replace(/[^A-Za-z0-9\-]/g,'').toUpperCase()"
+           onkeydown="if(event.key==='Enter'){footerAdd()}">
+    <button class="big-btn footer-add-btn" onclick="footerAdd()">🔍 追加</button>
   </div>
-  <!-- 一括保存・全クリア行（常時表示） -->
-  <div class="btn-row" style="margin-bottom:0;">
-    <button class="big-btn btn-save"   style="border:2px solid #ffffff;" id="footer-save-btn" onclick="footerSave()">💾 一括保存</button>
-    <button class="big-btn btn-danger" style="border:2px solid #ffffff;" onclick="footerAllClear()">🗑 全クリア</button>
+  <!-- 3行目：一括保存 | 全クリア -->
+  <div class="footer-row3">
+    <button class="big-btn btn-save footer-save-btn" id="footer-save-btn" onclick="footerSave()">💾 一括保存</button>
+    <button class="big-btn btn-danger footer-clear-btn" onclick="footerAllClear()">🗑 全クリア</button>
   </div>
 </div>
 
