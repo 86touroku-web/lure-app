@@ -1190,7 +1190,9 @@ function buildItemCardHTML(item, idx, mode){
     : `event.stopPropagation();removeBulkItem(${idx})`;
 
   // 販売金額インライン入力（発送作業のみ・コンパクト）
-  const curPrice = mode==='ship' ? (shipSellPrices[item.識別ID]||0) : 0;
+  // shipSellPricesに手動入力済みの値があればそれを優先、なければitem.販売金額（GAS値）を使用
+  const gasPrice = Number(item.販売金額||0);
+  const curPrice = mode==='ship' ? (shipSellPrices[item.識別ID] !== undefined ? shipSellPrices[item.識別ID] : gasPrice) : 0;
   const priceRow = mode==='ship'
     ? `<div class="ship-card-row" style="align-items:center;">
         <span class="ship-card-lbl">販売金額</span>
@@ -1258,7 +1260,9 @@ let shipSellPrices={};
 function addShipItem(item){
   if(shipItems.find(s=>s.識別ID===item.識別ID)){showToast('⚠️ すでに追加済みです','err');return;}
   shipItems.push(item);
-  shipSellPrices[item.識別ID]=0;
+  // GASから返ってきた販売金額を初期値としてセット（0の場合は未入力扱い）
+  const gasPrice = Number(item.販売金額||0);
+  shipSellPrices[item.識別ID] = gasPrice > 0 ? gasPrice : undefined;
   renderShipList();
   showToast('✅ '+(item.商品名||item.バーコード)+' を追加');
 }
