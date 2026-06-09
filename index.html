@@ -874,7 +874,7 @@ function footerClear(){
 function footerSave(){
   if(currentTab==='ship'){
     // 商品が0件なら何もしない
-    if(!shipItem) return;
+    if(!shipItems || shipItems.length===0) return;
     saveShipping();
   } else {
     // 商品が0件なら何もしない
