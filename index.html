@@ -874,7 +874,7 @@ function footerClear(){
 function footerSave(){
   if(currentTab==='ship'){
     // 商品が0件なら何もしない
-    if(!shipItems || shipItems.length===0) return;
+    if(!shipItem) return;
     saveShipping();
   } else {
     // 商品が0件なら何もしない
@@ -1354,6 +1354,20 @@ function saveShipping(){
 }
 
 function _doSaveShipping(soldDate){
+  // ★ 販売金額¥0チェック：1件でも¥0なら確認ダイアログ
+  const zeroItems = shipItems.filter(item=>(shipSellPrices[item.識別ID]||0)===0);
+  if(zeroItems.length > 0){
+    const zeroNames = zeroItems.map(item=>item.商品名||item.バーコード).join('\n');
+    showDialog('⚠️ 販売金額¥0の商品があります',
+      `以下の商品の販売金額が¥0です：\n\n${zeroNames}\n\nそれでも保存しますか？`,
+      ()=>_execSaveShipping(soldDate),
+      null,()=>{});
+    return;
+  }
+  _execSaveShipping(soldDate);
+}
+
+function _execSaveShipping(soldDate){
   // 確認ダイアログ
   const summary=shipItems.map((item,i)=>{
     const p=shipSellPrices[item.識別ID]||0;
@@ -1379,7 +1393,7 @@ function _doSaveShipping(soldDate){
           }else showToast('⚠️ 保存に失敗しました','err');
         },
         ()=>{hideLoad();showToast('⚠️ 通信エラー','err');});
-    },null);
+    },null,()=>{});
 }
 
 function clearShip(){
