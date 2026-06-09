@@ -9,7 +9,7 @@
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;}
 input,select,textarea,button{font-family:inherit;-webkit-appearance:none;appearance:none;}
 html{font-size:72%;overscroll-behavior:none;-webkit-text-size-adjust:100%;}
-body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size:1.4rem;background:linear-gradient(135deg,#1a6b3c 0%,#0d4f8c 100%);width:100%;height:100dvh;overflow:hidden;position:relative;-webkit-font-smoothing:antialiased;}
+body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size:1.4rem;background:linear-gradient(135deg,#1a6b3c 0%,#0d4f8c 100%);width:100%;height:100dvh;overflow:hidden;position:relative;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;}
 *::-webkit-scrollbar{display:none;}
 :root{
   --green-mid:#25a55a;--blue-mid:#1976d2;--blue-light:#42a5f5;--teal:#00bcd4;
@@ -68,14 +68,58 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 .scan-hint{flex-shrink:0;padding:.8rem 1.4rem 1.6rem;text-align:center;color:rgba(255,255,255,.75);font-size:var(--fs-sm);line-height:1.6;}
 .scan-cam-btn{margin-bottom:.6rem;padding:.5rem 1.4rem;border-radius:2rem;background:rgba(255,255,255,.15);border:.1rem solid rgba(255,255,255,.3);color:#fff;font-size:var(--fs-sm);font-weight:700;cursor:pointer;}
 /* ── TAB ── */
-.tab-bar{position:absolute;bottom:0;left:0;right:0;height:var(--tab-h);background:rgba(13,79,140,.97);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -2px 12px rgba(0,0,0,.25);}
-.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3rem;cursor:pointer;border:none;background:none;padding:0;color:rgba(255,255,255,.5);border-top:.3rem solid transparent;}
-.tab-btn.active{color:#fff;border-top-color:var(--yellow);}
-.tab-icon{font-size:2.4rem;line-height:1;}
-.tab-label{font-size:var(--fs-xs);font-weight:700;}
+/* 旧タブバー → 廃止（固定フッター内のタブボタンに移行） */
+.tab-bar{ display:none; }
 /* ── SCREENS ── */
-.screen{position:absolute;top:0;left:0;right:0;bottom:var(--tab-h);overflow-y:auto;overflow-x:hidden;display:none;padding:.8rem .8rem 2rem;overscroll-behavior:none;-webkit-overflow-scrolling:touch;}
+/* メインコンテンツ：flex:1でフッター以外の全高さを占有・スクロール可 */
+.screen{
+  display:none;
+  flex:1;
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding:.8rem .8rem 1rem;
+  overscroll-behavior:none;
+  -webkit-overflow-scrolling:touch;
+}
 .screen.active{display:block;}
+/* ── 固定フッター（検索カード＋タブ） ── */
+.bottom-panel{
+  flex-shrink:0;
+  background:rgba(255,220,230,0.97);
+  border-radius:1.4rem 1.4rem 0 0;
+  padding:.7rem .8rem env(safe-area-inset-bottom);
+  box-shadow:0 -4px 16px rgba(0,0,0,.25);
+  z-index:100;
+}
+/* タブ切り替えボタン行 */
+.bottom-tab-row{
+  display:flex;
+  gap:.5rem;
+  margin-bottom:.6rem;
+}
+.bottom-tab-btn{
+  flex:1;
+  height:4.2rem;
+  border-radius:var(--r);
+  border:2px solid #ffffff;
+  cursor:pointer;
+  font-size:var(--fs-md);
+  font-weight:900;
+  letter-spacing:.05em;
+  transition:background .15s, color .15s;
+  box-shadow:0 0 0 2px rgba(255,255,255,.4);
+  /* 非選択時（消灯） */
+  background:#a6ada9;
+  color:#0a0a0a;
+}
+.bottom-tab-btn.active-ship{
+  background:#f72386;
+  color:#fcfcfc;
+}
+.bottom-tab-btn.active-bulk{
+  background:#f72386;
+  color:#fcfcfc;
+}
 .page-title{text-align:center;font-size:var(--fs-lg);font-weight:800;color:#fff;margin-bottom:.8rem;}
 /* ── ブロックカード ── */
 .block-card{border-radius:1.2rem;padding:1rem;margin-bottom:.8rem;box-shadow:0 2px 8px rgba(0,0,0,.12);position:relative;}
@@ -121,6 +165,13 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
   margin-bottom:0!important;
   flex-shrink:0;
 }
+/* タイトルテキスト真中央用：左バッジと同幅のダミースペーサー */
+.search-badge-dummy{
+  flex-shrink:0;
+  visibility:hidden;
+  /* block-titleと同じ幅を確保するためmin-widthをblock-titleに合わせる */
+  min-width:8rem;
+}
 /* タイトルテキスト（発送作業／一括編集）：残りスペースを占めて中央寄せ */
 .search-card-title{
   flex:1;
@@ -130,6 +181,42 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
   color:var(--text-dark);
   letter-spacing:.02em;
   line-height:1;
+}
+/* 3カラム検索ブロック：スキャン | 入力+追加 | クリア */
+.search-block-3col{
+  display:grid;
+  grid-template-columns:9rem 1fr 9rem;
+  grid-template-rows:var(--h-inp) var(--h-inp);
+  gap:.5rem;
+}
+.search-mid-col{
+  grid-column:2;
+  grid-row:1 / 3;
+  display:flex;
+  flex-direction:column;
+  gap:.5rem;
+}
+.search-mid-col .inp{ flex:1; }
+.search-mid-col .big-btn{ flex:1; }
+/* クリアボタン列：スキャンと同サイズ・縦2行分 */
+.clear-col{
+  grid-column:3;
+  grid-row:1 / 3;
+  display:flex;
+}
+.clear-col .big-btn{
+  width:100%;
+  height:calc(var(--h-inp) * 2 + .5rem);
+}
+/* クリアボタンスタイル（全クリアと同じ背景色） */
+.search-clear-btn{
+  background:linear-gradient(135deg,#ff9800,#e65100)!important;
+  color:#fff!important;
+  font-size:var(--fs-md)!important;
+  font-weight:900!important;
+  border:2px solid #ffffff!important;
+  border-radius:var(--r)!important;
+  letter-spacing:.03em;
 }
 /* スキャンボタン：左列・2行分フル高さ */
 .scan-col{
@@ -187,7 +274,43 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
   margin-bottom:.8rem;
 }
 .search-right{display:contents;}
-/* ── B: 商品情報ブロック ── */
+/* ── 固定フッター 2行目（スキャン・追加・入力 25:25:50） ── */
+.footer-row2{
+  display:grid;
+  grid-template-columns:1fr 1fr 2fr;
+  gap:.5rem;
+  margin-bottom:.5rem;
+}
+.footer-row2 .big-btn{ height:var(--h-inp); }
+.footer-row2 .inp{ height:var(--h-inp); }
+/* スキャンボタン */
+.footer-scan-btn{
+  font-size:var(--fs-md)!important;
+  font-weight:900!important;
+  border:2px solid #ffffff!important;
+  box-shadow:0 0 0 2px rgba(255,255,255,.4)!important;
+}
+/* 追加ボタン：紫 */
+.footer-add-btn{
+  background:linear-gradient(135deg,#a92bfc,#7b1fa2)!important;
+  color:#fcfcfc!important;
+  font-size:var(--fs-md)!important;
+  font-weight:900!important;
+  border:2px solid #ffffff!important;
+  box-shadow:0 0 0 2px rgba(255,255,255,.4)!important;
+}
+/* ── 固定フッター 3行目（一括保存・全クリア） ── */
+.footer-row3{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:.5rem;
+  margin-bottom:0;
+}
+.footer-row3 .big-btn{
+  height:var(--h-btn);
+  border:2px solid #ffffff!important;
+  box-shadow:0 0 0 2px rgba(255,255,255,.4)!important;
+}
 .product-layout{display:flex;gap:.8rem;align-items:flex-start;}
 /* 画像：拡大（紺丸サイズ） */
 .product-img-col{flex:0 0 13rem;}
@@ -466,25 +589,6 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 ════════════════════════════════ -->
 <div class="screen active" id="screen-ship">
 
-  <!-- A: 検索ブロック（赤） -->
-  <div class="block-card card-red">
-    <div class="search-card-header">
-      <span class="block-title bt-red search-badge">🔍 検索</span>
-      <span class="search-card-title">🚚 発送作業</span>
-    </div>
-    <div class="search-block">
-      <div class="scan-col">
-        <button class="big-btn btn-scan search-scan-btn" onclick="startScan('ship')">📷<br>スキャン</button>
-      </div>
-      <div class="search-right-inp">
-        <input type="text" class="inp search-inp-txt" id="search-input" placeholder="バーコード / 商品NO" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" oninput="this.value=this.value.replace(/[^A-Za-z0-9\-]/g,'').toUpperCase()" onkeydown="if(event.key==='Enter'){searchManual()}">
-      </div>
-      <div class="search-right-btn">
-        <button class="big-btn btn-search search-add-btn" onclick="searchManual()">🔍 追加</button>
-      </div>
-    </div>
-  </div>
-
   <!-- 件数表示 -->
   <div class="bulk-count" id="ship-count" style="display:none;"></div>
 
@@ -505,11 +609,6 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
         <input type="date" class="edit-inp" id="ship-sold-date">
       </div>
     </div>
-    <!-- 保存・クリアボタン -->
-    <div class="btn-row" style="margin-bottom:1rem">
-      <button class="big-btn btn-save"  onclick="saveShipping()">💾 一括保存</button>
-      <button class="big-btn btn-danger" onclick="clearShip()">🗑 全クリア</button>
-    </div>
   </div>
 </div>
 
@@ -517,31 +616,8 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
      TAB2: 一括編集
 ════════════════════════════════ -->
 <div class="screen" id="screen-bulk">
-  <!-- A: 検索ブロック（発送作業と同じ構成） -->
-  <div class="block-card card-red" style="margin-bottom:.8rem;">
-    <div class="search-card-header">
-      <span class="block-title bt-red search-badge">🔍 検索</span>
-      <span class="search-card-title" style="color:#0042e8;">📝 一括編集</span>
-    </div>
-    <div class="search-block">
-      <div class="scan-col">
-        <button class="big-btn btn-scan search-scan-btn" onclick="startScan('bulk')">📷<br>スキャン</button>
-      </div>
-      <div class="search-right-inp">
-        <input type="text" class="inp search-inp-txt" id="bulk-search-input"
-               inputmode="numeric" autocomplete="off" autocorrect="off"
-               autocapitalize="characters" spellcheck="false"
-               placeholder="バーコード / 商品NO"
-               oninput="this.value=this.value.replace(/[^A-Za-z0-9\-]/g,'').toUpperCase()"
-               onkeydown="if(event.key==='Enter'){searchBulkManual()}">
-      </div>
-      <div class="search-right-btn">
-        <button class="big-btn btn-search search-add-btn" onclick="searchBulkManual()">🔍 追加</button>
-      </div>
-    </div>
-  </div>
   <!-- リアルタイムチェックボタン（商品カードがない時のみ表示） -->
-  <div id="bulk-realtime-wrap">
+  <div id="bulk-realtime-wrap" style="display:none!important;">
     <button class="btn-realtime" onclick="openYahooPopup()">
       🔍 リアルタイム・チェック
     </button>
@@ -625,10 +701,6 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
         </div>
       </div>
     </div>
-    <div class="btn-row" style="margin-bottom:1rem">
-      <button class="big-btn btn-save"   style="border:2px solid #ffffff;" onclick="saveBulk()">💾 一括保存</button>
-      <button class="big-btn btn-danger" style="border:2px solid #ffffff;" onclick="clearBulk()">🗑 全クリア</button>
-    </div>
   </div>
 </div>
 
@@ -657,11 +729,34 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
   </div>
 </div>
 
-<!-- タブバー -->
-<div class="tab-bar">
-  <button class="tab-btn active" id="tab-ship" onclick="changeTab('ship')"><span class="tab-icon">🚚</span><span class="tab-label">発送作業</span></button>
-  <button class="tab-btn"        id="tab-bulk" onclick="changeTab('bulk')"><span class="tab-icon">📝</span><span class="tab-label">一括編集</span></button>
+<!-- 固定フッター：タブ切り替え＋共通操作パネル -->
+<div class="bottom-panel">
+  <!-- 1行目：タブ切り替えボタン -->
+  <div class="bottom-tab-row">
+    <button class="bottom-tab-btn active-ship" id="tab-ship" onclick="changeTab('ship')">🚚 発送作業</button>
+    <button class="bottom-tab-btn" id="tab-bulk" onclick="changeTab('bulk')">📝 一括編集</button>
+  </div>
+  <!-- 2行目：スキャン | 追加 | バーコード入力（25:25:50） -->
+  <div class="footer-row2">
+    <button class="big-btn btn-scan footer-scan-btn" onclick="footerScan()">📷 スキャン</button>
+    <button class="big-btn footer-add-btn" onclick="footerAdd()">🔍 追加</button>
+    <input type="text" class="inp search-inp-txt footer-inp" id="footer-search-input"
+           inputmode="numeric" autocomplete="off" autocorrect="off"
+           autocapitalize="characters" spellcheck="false"
+           placeholder="バーコード / 商品NO"
+           oninput="this.value=this.value.replace(/[^A-Za-z0-9\-]/g,'').toUpperCase()"
+           onkeydown="if(event.key==='Enter'){footerAdd()}">
+  </div>
+  <!-- 3行目：一括保存 | 全クリア -->
+  <div class="footer-row3">
+    <button class="big-btn btn-save footer-save-btn" id="footer-save-btn" onclick="footerSave()">💾 一括保存</button>
+    <button class="big-btn btn-danger footer-clear-btn" onclick="footerAllClear()">🗑 全クリア</button>
+  </div>
 </div>
+
+<!-- 互換用hidden入力（searchManual/searchBulkManual から参照） -->
+<input type="hidden" id="search-input">
+<input type="hidden" id="bulk-search-input">
 
 <script>
 // GitHub Pages直接アクセス用GAS URL
@@ -722,14 +817,77 @@ function showDialog(title,msg,okCb,cancelCb,noCb){
 }
 function closeDialog(){document.getElementById('dialog-ov').classList.remove('open');}
 function setText(id,val){const el=document.getElementById(id);if(el)el.textContent=val||'-';}
+// 現在のアクティブタブ
+let currentTab = 'ship';
+
 function changeTab(n){
-  // ① タブ切り替え時に入力内容をクリア（2重変更防止）
+  // タブ切り替え時に入力内容をクリア
   if(n==='bulk') clearShip();
   if(n==='ship') clearBulk();
+  currentTab = n;
+  // スクリーン切り替え
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('screen-'+n).classList.add('active');
-  document.getElementById('tab-'+n).classList.add('active');
+  // タブボタンのハイライト切り替え
+  const shipBtn = document.getElementById('tab-ship');
+  const bulkBtn = document.getElementById('tab-bulk');
+  shipBtn.classList.remove('active-ship','active-bulk');
+  bulkBtn.classList.remove('active-ship','active-bulk');
+  if(n==='ship'){
+    shipBtn.classList.add('active-ship');
+  } else {
+    bulkBtn.classList.add('active-bulk');
+  }
+  // フッター入力欄をクリア
+  document.getElementById('footer-search-input').value='';
+}
+
+// フッター：スキャンボタン（現在のタブに応じて分岐）
+function footerScan(){
+  if(currentTab==='ship') startScan('ship');
+  else startScan('bulk');
+}
+
+// フッター：追加ボタン（現在のタブに応じて分岐）
+function footerAdd(){
+  const val = document.getElementById('footer-search-input').value.trim();
+  if(!val) return;
+  // 各タブの検索入力欄に値をコピーして検索実行
+  if(currentTab==='ship'){
+    document.getElementById('search-input').value = val;
+    searchManual();
+  } else {
+    document.getElementById('bulk-search-input').value = val;
+    searchBulkManual();
+  }
+  document.getElementById('footer-search-input').value='';
+}
+
+// フッター：クリアボタン
+function footerClear(){
+  document.getElementById('footer-search-input').value='';
+  if(currentTab==='ship') clearShip();
+  else clearBulk();
+}
+
+// フッター：一括保存（タブにより発送保存 or 一括編集保存）
+function footerSave(){
+  if(currentTab==='ship'){
+    // 商品が0件なら何もしない
+    if(!shipItems || shipItems.length===0) return;
+    saveShipping();
+  } else {
+    // 商品が0件なら何もしない
+    if(!bulkItems || bulkItems.length===0) return;
+    saveBulk();
+  }
+}
+
+// フッター：全クリア
+function footerAllClear(){
+  if(currentTab==='ship') clearShip();
+  else clearBulk();
+  document.getElementById('footer-search-input').value='';
 }
 // ── ポップアップ ──
 function openPopup(target){
@@ -952,8 +1110,23 @@ function fetchProduct(keyword,mode){
     if(!res||!res.found){showToast('⚠️ 未登録のバーコード / 商品NOです','err');return;}
 
     if(mode==='ship'){
-      // 発送作業：単品のみ（セット対応なし）
-      addShipItem(res.item);
+      // 発送作業：セット登録済みの場合は全商品を自動一括追加
+      if(res.isSet && res.setItems && res.setItems.length > 0){
+        let added=0;
+        res.setItems.forEach(item=>{
+          if(!shipItems.find(s=>s.バーコード===item.バーコード)){
+            addShipItem(item); added++;
+          }
+        });
+        if(added>0){
+          showToast('✅ セット商品 '+res.setItems.length+'件を一括追加しました');
+        } else {
+          showToast('⚠️ セット商品はすでに追加済みです','err');
+        }
+      } else {
+        // 通常商品：1件追加
+        addShipItem(res.item);
+      }
       return;
     }
 
@@ -1017,7 +1190,9 @@ function buildItemCardHTML(item, idx, mode){
     : `event.stopPropagation();removeBulkItem(${idx})`;
 
   // 販売金額インライン入力（発送作業のみ・コンパクト）
-  const curPrice = mode==='ship' ? (shipSellPrices[item.識別ID]||0) : 0;
+  // shipSellPricesに手動入力済みの値があればそれを優先、なければitem.販売金額（GAS値）を使用
+  const gasPrice = Number(item.販売金額||0);
+  const curPrice = mode==='ship' ? (shipSellPrices[item.識別ID] !== undefined ? shipSellPrices[item.識別ID] : gasPrice) : 0;
   const priceRow = mode==='ship'
     ? `<div class="ship-card-row" style="align-items:center;">
         <span class="ship-card-lbl">販売金額</span>
@@ -1085,7 +1260,9 @@ let shipSellPrices={};
 function addShipItem(item){
   if(shipItems.find(s=>s.識別ID===item.識別ID)){showToast('⚠️ すでに追加済みです','err');return;}
   shipItems.push(item);
-  shipSellPrices[item.識別ID]=0;
+  // GASから返ってきた販売金額を初期値としてセット（0の場合は未入力扱い）
+  const gasPrice = Number(item.販売金額||0);
+  shipSellPrices[item.識別ID] = gasPrice > 0 ? gasPrice : undefined;
   renderShipList();
   showToast('✅ '+(item.商品名||item.バーコード)+' を追加');
 }
@@ -1137,13 +1314,12 @@ function renderShipList(){
   const count=shipItems.length;
   const shipCountEl=document.getElementById('ship-count');
   if(count===0){shipCountEl.style.display='none';shipCountEl.textContent='';}
-  else{shipCountEl.style.display='';shipCountEl.textContent=count+'件 追加済み';}
+  else{shipCountEl.style.display='none';shipCountEl.textContent='';}
   document.getElementById('ship-empty').style.display=count===0?'block':'none';
   document.getElementById('ship-form').style.display=count>0?'block':'none';
   listEl.innerHTML='';
-  // ⑤ 逆順表示（最新追加が上）・番号は追加順のまま
-  [...shipItems].reverse().forEach((item,revIdx)=>{
-    const idx=shipItems.length-1-revIdx;
+  // 正順表示（新しく追加した商品が下）
+  shipItems.forEach((item,idx)=>{
     const card=document.createElement('div');
     card.className='ship-card';
     card.innerHTML=buildItemCardHTML(item,idx,'ship');
@@ -1203,7 +1379,7 @@ function _doSaveShipping(soldDate){
           }else showToast('⚠️ 保存に失敗しました','err');
         },
         ()=>{hideLoad();showToast('⚠️ 通信エラー','err');});
-    },null,()=>{});
+    },null);
 }
 
 function clearShip(){
@@ -1236,11 +1412,10 @@ function renderBulkList(){
   document.getElementById('bulk-form').style.display=count>0?'block':'none';
   // 商品カードがある時はボタン非表示・ない時は表示
   const rtWrap=document.getElementById('bulk-realtime-wrap');
-  if(rtWrap)rtWrap.style.display=count===0?'block':'none';
+  if(rtWrap)rtWrap.style.display='none';
   listEl.innerHTML='';
-  // ⑤ 逆順表示（最新追加が上）・番号は追加順のまま
-  [...bulkItems].reverse().forEach((item,revIdx)=>{
-    const idx=bulkItems.length-1-revIdx;
+  // 正順表示（新しく追加した商品が下）
+  bulkItems.forEach((item,idx)=>{
     const card=document.createElement('div');
     card.className='ship-card';
     card.innerHTML=buildItemCardHTML(item,idx,'bulk');
