@@ -532,11 +532,64 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 .popup-item{padding:1rem 1.6rem;font-size:var(--fs-md);cursor:pointer;color:var(--text-dark);font-weight:600;border-bottom:.1rem solid #f5f5f5;}
 .popup-item:active{background:#e3f2fd;}
 .popup-item.selected{color:var(--blue-mid);font-weight:800;}
+
+/* ── モード名ネオンラベル ── */
+#mode-label{
+  position:fixed;
+  /* 画面全体の中央（フッターの高さ分だけ上に調整） */
+  top:0; left:0; right:0;
+  bottom:calc(var(--tab-h) * 2.8);   /* フッター高さ分を除いた領域の中央 */
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  pointer-events:none;
+  z-index:10;
+  /* フェーズ管理用カスタムプロパティ */
+  opacity:0;
+}
+#mode-label-text{
+  font-size:2.2rem;
+  font-weight:700;
+  white-space:nowrap;
+  line-height:1;
+  /* transitionはJSで動的に設定 */
+  transition:opacity 0.18s ease-in-out, text-shadow 0.15s ease-in-out;
+}
+/* 一括編集：ネオンブルー */
+#mode-label-text.mode-bulk{
+  color:#34f7fa;
+  text-shadow:
+    0 0  6px #34f7fa,
+    0 0 18px #34f7fa,
+    0 0 40px #00d4e8;
+}
+/* 発送作業：ネオンオレンジ */
+#mode-label-text.mode-ship{
+  color:#fac534;
+  text-shadow:
+    0 0  6px #ff9f00,
+    0 0 18px #ff9f00,
+    0 0 40px #e65100;
+}
+/* 消灯フェーズ1：グロウだけ先に消す */
+#mode-label-text.dim-glow{
+  text-shadow:none;
+  transition:text-shadow 0.12s ease-in-out;
+}
+/* 消灯フェーズ2：本体フェードアウト */
+#mode-label.fade-out{
+  opacity:0;
+  transition:opacity 0.18s ease-in-out;
+}
 </style>
 </head>
 <body>
 
-<!-- ローディング -->
+<!-- モード名ネオンラベル（画面中央） -->
+<div id="mode-label" aria-hidden="true">
+  <span id="mode-label-text"></span>
+</div>
+
 <div class="loading-ov" id="loading-ov"><div class="spinner"></div><div class="loading-msg" id="loading-msg">読み込み中...</div></div>
 <!-- トースト -->
 <div class="toast" id="toast"></div>
@@ -820,6 +873,49 @@ function setText(id,val){const el=document.getElementById(id);if(el)el.textConte
 // 現在のアクティブタブ
 let currentTab = 'ship';
 
+// ── モード名ネオンラベル制御 ──
+let _modeLabelTimer = null;
+function showModeLabel(mode){
+  // 進行中のタイマーをキャンセル
+  if(_modeLabelTimer){ clearTimeout(_modeLabelTimer); _modeLabelTimer=null; }
+  const wrap = document.getElementById('mode-label');
+  const txt  = document.getElementById('mode-label-text');
+  // リセット：フェードアウト・グロウ消灯クラスを除去してtransitionを一旦無効化
+  wrap.style.transition = 'none';
+  txt.style.transition  = 'none';
+  wrap.classList.remove('fade-out');
+  txt.classList.remove('dim-glow');
+  wrap.style.opacity = '0';
+  txt.className = '';
+  // テキストとカラーモードをセット
+  txt.textContent = (mode === 'bulk') ? '一括編集' : '発送作業';
+  txt.classList.add(mode === 'bulk' ? 'mode-bulk' : 'mode-ship');
+  // 次フレームでtransitionを有効化してフェードイン
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      wrap.style.transition = 'opacity 0.18s ease-in-out';
+      txt.style.transition  = 'opacity 0.18s ease-in-out, text-shadow 0.15s ease-in-out';
+      wrap.style.opacity    = '1';
+      wrap.style.pointerEvents = 'none';
+    });
+  });
+}
+function hideModeLabel(){
+  const wrap = document.getElementById('mode-label');
+  const txt  = document.getElementById('mode-label-text');
+  if(wrap.style.opacity === '0') return; // 既に非表示なら何もしない
+  // フェーズ1：グロウを先行消灯（0.12s）
+  txt.style.transition = 'text-shadow 0.12s ease-in-out';
+  txt.classList.add('dim-glow');
+  // フェーズ2：グロウ消灯直後（0.05sディレイ後）に本体フェードアウト（0.18s）
+  // 合計: 0.05 + 0.18 = 0.23s < 0.3s ✅
+  _modeLabelTimer = setTimeout(()=>{
+    wrap.style.transition = 'opacity 0.18s ease-in-out';
+    wrap.style.opacity    = '0';
+    wrap.style.pointerEvents = 'none';
+  }, 50);
+}
+
 function changeTab(n){
   // タブ切り替え時に入力内容をクリア
   if(n==='bulk') clearShip();
@@ -840,6 +936,8 @@ function changeTab(n){
   }
   // フッター入力欄をクリア
   document.getElementById('footer-search-input').value='';
+  // ネオンラベルをフェードイン表示
+  showModeLabel(n);
 }
 
 // フッター：スキャンボタン（現在のタブに応じて分岐）
@@ -1765,8 +1863,34 @@ function loadMasters(){
     buildStatusChips('ship-status-chips',SHIP_STATUSES,()=>shipStatus,s=>{shipStatus=s;});
     buildStatusChips('bulk-status-chips',ALL_STATUSES,()=>bulkStatus,s=>{bulkStatus=s;});
   },()=>{hideLoad();showToast('⚠️ マスタ読み込みエラー','err');});
+  // 初期モード名を表示（デフォルト：発送作業）
+  setTimeout(()=>showModeLabel('ship'), 300);
 }
 loadMasters();
+
+// ── ネオンラベル消灯トリガー（入力欄フォーカス・入力・アクションボタン押下） ──
+(function(){
+  const inp = document.getElementById('footer-search-input');
+  // フォーカス時
+  inp.addEventListener('focus', hideModeLabel, {passive:true});
+  // 1文字目入力時
+  inp.addEventListener('input', hideModeLabel, {passive:true});
+  // タブボタン以外のアクションボタン（スキャン・追加・一括保存・全クリア）押下時
+  ['footer-save-btn'].forEach(function(id){
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('touchstart', hideModeLabel, {passive:true});
+  });
+  document.querySelectorAll('.footer-scan-btn, .footer-add-btn, .footer-clear-btn').forEach(function(el){
+    el.addEventListener('touchstart', hideModeLabel, {passive:true});
+  });
+  // フッターパネル内のどのボタン・入力操作でも消灯（touchstartでサクサク）
+  document.querySelector('.bottom-panel').addEventListener('touchstart', function(e){
+    // タブボタン（tab-ship, tab-bulk）は除外
+    if(e.target.closest('#tab-ship') || e.target.closest('#tab-bulk')) return;
+    hideModeLabel();
+  }, {passive:true});
+})();
+
 </script>
 <!-- ヤフオク管理ポップアップ -->
 <div class="yahoo-popup-ov" id="yahoo-popup-ov">
