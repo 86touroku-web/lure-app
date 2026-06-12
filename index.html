@@ -532,57 +532,11 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;font-size
 .popup-item{padding:1rem 1.6rem;font-size:var(--fs-md);cursor:pointer;color:var(--text-dark);font-weight:600;border-bottom:.1rem solid #f5f5f5;}
 .popup-item:active{background:#e3f2fd;}
 .popup-item.selected{color:var(--blue-mid);font-weight:800;}
-
-/* ── モード名ネオンラベル ── */
-#mode-label{
-  position:fixed;
-  top:0; left:0; right:0;
-  /* フッターパネルより上の領域の中央に来るよう bottom を調整 */
-  bottom:22rem;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  pointer-events:none;
-  z-index:10;
-  opacity:0;
-}
-#mode-label-text{
-  /* 画面横幅の16%＝スマホで約65px相当の大迫力サイズ */
-  font-size:clamp(56px, 16vw, 80px);
-  font-weight:700;
-  white-space:nowrap;
-  line-height:1;
-  color:#ffffff;
-  transition:opacity 0.18s ease-in-out, text-shadow 0.12s ease-in-out;
-}
-/* 一括編集：白文字×ネオンブルー3層グロウ */
-#mode-label-text.mode-bulk{
-  text-shadow:
-    0 0  5px #34f7fa,
-    0 0 15px #34f7fa,
-    0 0 30px #00d4e8;
-}
-/* 発送作業：白文字×ネオンオレンジ3層グロウ */
-#mode-label-text.mode-ship{
-  text-shadow:
-    0 0  5px #fac534,
-    0 0 15px #ff9f00,
-    0 0 30px #e65100;
-}
-/* 消灯フェーズ1：グロウのみ先行消灯 */
-#mode-label-text.dim-glow{
-  text-shadow:none;
-  transition:text-shadow 0.10s ease-in-out;
-}
 </style>
 </head>
 <body>
 
-<!-- モード名ネオンラベル（画面中央） -->
-<div id="mode-label" aria-hidden="true">
-  <span id="mode-label-text"></span>
-</div>
-
+<!-- ローディング -->
 <div class="loading-ov" id="loading-ov"><div class="spinner"></div><div class="loading-msg" id="loading-msg">読み込み中...</div></div>
 <!-- トースト -->
 <div class="toast" id="toast"></div>
@@ -866,54 +820,15 @@ function setText(id,val){const el=document.getElementById(id);if(el)el.textConte
 // 現在のアクティブタブ
 let currentTab = 'ship';
 
-// ── モード名ネオンラベル制御 ──
-let _modeLabelTimer = null;
-
-function showModeLabel(mode){
-  if(_modeLabelTimer){ clearTimeout(_modeLabelTimer); _modeLabelTimer=null; }
-  const wrap = document.getElementById('mode-label');
-  const txt  = document.getElementById('mode-label-text');
-  // transitionを一時無効にしてリセット
-  wrap.style.transition = 'none';
-  txt.style.transition  = 'none';
-  wrap.style.opacity    = '0';
-  txt.className         = '';
-  txt.classList.add(mode==='bulk' ? 'mode-bulk' : 'mode-ship');
-  txt.textContent = (mode==='bulk') ? '一括編集' : '発送作業';
-  // 2フレーム後にtransitionを有効化してフェードイン
-  requestAnimationFrame(()=>{
-    requestAnimationFrame(()=>{
-      wrap.style.transition = 'opacity 0.18s ease-in-out';
-      txt.style.transition  = 'opacity 0.18s ease-in-out, text-shadow 0.12s ease-in-out';
-      wrap.style.opacity    = '1';
-      wrap.style.pointerEvents = 'none';
-    });
-  });
-}
-
-function hideModeLabel(){
-  const wrap = document.getElementById('mode-label');
-  const txt  = document.getElementById('mode-label-text');
-  if(parseFloat(wrap.style.opacity||0) === 0) return;
-  if(_modeLabelTimer){ clearTimeout(_modeLabelTimer); _modeLabelTimer=null; }
-  // フェーズ1：グロウを0.10sで先行消灯
-  txt.style.transition = 'text-shadow 0.10s ease-in-out';
-  txt.classList.add('dim-glow');
-  // フェーズ2：50msディレイ後に本体を0.15sでフェードアウト（合計≦0.25s）
-  _modeLabelTimer = setTimeout(()=>{
-    wrap.style.transition  = 'opacity 0.15s ease-in-out';
-    wrap.style.opacity     = '0';
-    wrap.style.pointerEvents = 'none';
-    _modeLabelTimer = null;
-  }, 50);
-}
-
 function changeTab(n){
+  // タブ切り替え時に入力内容をクリア
   if(n==='bulk') clearShip();
   if(n==='ship') clearBulk();
   currentTab = n;
+  // スクリーン切り替え
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+n).classList.add('active');
+  // タブボタンのハイライト切り替え
   const shipBtn = document.getElementById('tab-ship');
   const bulkBtn = document.getElementById('tab-bulk');
   shipBtn.classList.remove('active-ship','active-bulk');
@@ -923,9 +838,8 @@ function changeTab(n){
   } else {
     bulkBtn.classList.add('active-bulk');
   }
+  // フッター入力欄をクリア
   document.getElementById('footer-search-input').value='';
-  // ネオンラベルをフェードイン
-  showModeLabel(n);
 }
 
 // フッター：スキャンボタン（現在のタブに応じて分岐）
@@ -960,7 +874,7 @@ function footerClear(){
 function footerSave(){
   if(currentTab==='ship'){
     // 商品が0件なら何もしない
-    if(!shipItem) return;
+    if(!shipItems || shipItems.length===0) return;
     saveShipping();
   } else {
     // 商品が0件なら何もしない
@@ -1840,31 +1754,19 @@ function execRealtimeCheck(){
 // ── 初期化 ──
 function loadMasters(){
   showLoad('データ読み込み中...');
+  // 販売済日デフォルト：今日
   const t=new Date();
   const today=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
   document.getElementById('ship-sold-date').value=today;
+  // 発送リスト初期化
   renderShipList();
   gasCall('getMasters',{},res=>{
     hideLoad();if(res&&res.ok)masters=res;
     buildStatusChips('ship-status-chips',SHIP_STATUSES,()=>shipStatus,s=>{shipStatus=s;});
     buildStatusChips('bulk-status-chips',ALL_STATUSES,()=>bulkStatus,s=>{bulkStatus=s;});
   },()=>{hideLoad();showToast('⚠️ マスタ読み込みエラー','err');});
-  // 初期モード名を表示（デフォルト：発送作業）
-  setTimeout(()=>showModeLabel('ship'), 300);
 }
 loadMasters();
-
-// ── ネオンラベル消灯トリガー ──
-(function(){
-  const inp = document.getElementById('footer-search-input');
-  inp.addEventListener('focus', hideModeLabel, {passive:true});
-  inp.addEventListener('input', hideModeLabel, {passive:true});
-  // フッターパネル内の操作（タブボタン除く）でも消灯
-  document.querySelector('.bottom-panel').addEventListener('touchstart', function(e){
-    if(e.target.closest('#tab-ship') || e.target.closest('#tab-bulk')) return;
-    hideModeLabel();
-  }, {passive:true});
-})();
 </script>
 <!-- ヤフオク管理ポップアップ -->
 <div class="yahoo-popup-ov" id="yahoo-popup-ov">
