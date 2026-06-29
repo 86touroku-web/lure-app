@@ -1772,8 +1772,10 @@ function loadMasters(){
     const bcParam=urlParams.get('bc');
     if(bcParam){
       changeTab('bulk');
-      document.getElementById('bulk-search-input').value=bcParam;
-      searchBulkManual();
+      setTimeout(()=>{
+        document.getElementById('bulk-search-input').value=bcParam;
+        searchBulkManual();
+      },300);
     }
   },()=>{hideLoad();showToast('⚠️ マスタ読み込みエラー','err');});
 }
