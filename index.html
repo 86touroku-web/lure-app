@@ -1773,8 +1773,8 @@ function loadMasters(){
     if(bcParam){
       changeTab('bulk');
       setTimeout(()=>{
-        document.getElementById('bulk-search-input').value=bcParam;
-        searchBulkManual();
+        document.getElementById('footer-search-input').value=bcParam;
+        footerAdd();
       },300);
     }
   },()=>{hideLoad();showToast('⚠️ マスタ読み込みエラー','err');});
