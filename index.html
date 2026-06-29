@@ -1239,7 +1239,10 @@ function buildItemCardHTML(item, idx, mode){
       <button class="ship-card-del" onclick="${delFn}">✕</button>
     </div>
     <div class="ship-card-expand" id="${expandId}">
-      <button class="ship-detail-btn" id="${detailBtnId}" onclick="${detailFn}">📋 詳細情報 ▼</button>
+      <div style="display:flex;gap:.5rem;padding:0;">
+        <button class="ship-detail-btn" id="${detailBtnId}" onclick="${detailFn}" style="flex:1;">📋 詳細情報 ▼</button>
+        ${mode==='bulk' ? `<a href="https://86touroku-web.github.io/Browse/browse_index.html" style="flex:1;display:flex;align-items:center;justify-content:center;background:linear-gradient(90deg,#1a5f4a,#25a55a);color:#fff;border-radius:.8rem;text-align:center;font-size:var(--fs-sm);font-weight:800;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.2);">📋 回覧へ</a>` : ''}
+      </div>
       <div class="ship-detail-area" id="${detailAreaId}">
         <div class="ship-detail-grid">
           <span class="ship-d-lbl">メーカー</span><span class="ship-d-val">${item.メーカー||'-'}</span>
@@ -1249,7 +1252,6 @@ function buildItemCardHTML(item, idx, mode){
           <span class="ship-d-lbl">購入金額</span><span class="ship-d-val">${item.購入金額?'¥'+Number(item.購入金額).toLocaleString():'-'}</span>
           <span class="ship-d-lbl">購入日</span>  <span class="ship-d-val">${item.購入日||'-'}</span>
         </div>
-        ${mode==='bulk' ? `<a href="https://86touroku-web.github.io/Browse/browse_index.html" style="display:block;margin:.8rem .4rem .4rem;padding:.7rem;background:linear-gradient(90deg,#1a5f4a,#25a55a);color:#fff;border-radius:.8rem;text-align:center;font-size:var(--fs-sm);font-weight:800;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.2);">📋 回覧へ</a>` : ''}
       </div>
     </div>`;
 }
