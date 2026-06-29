@@ -1767,19 +1767,28 @@ function loadMasters(){
     hideLoad();if(res&&res.ok)masters=res;
     buildStatusChips('ship-status-chips',SHIP_STATUSES,()=>shipStatus,s=>{shipStatus=s;});
     buildStatusChips('bulk-status-chips',ALL_STATUSES,()=>bulkStatus,s=>{bulkStatus=s;});
-    // URLパラメータ ?bc= を検知して一括編集タブを自動で開く
-    const urlParams=new URLSearchParams(window.location.search);
-    const bcParam=urlParams.get('bc');
-    if(bcParam){
-      changeTab('bulk');
-      setTimeout(()=>{
-        document.getElementById('footer-search-input').value=bcParam;
-        footerAdd();
-      },1500);
-    }
   },()=>{hideLoad();showToast('⚠️ マスタ読み込みエラー','err');});
 }
 loadMasters();
+// URLパラメータ ?bc= を検知して一括編集タブを自動で開く（getMasters完了後に独立実行）
+(function waitForMastersAndJump(){
+  const urlParams=new URLSearchParams(window.location.search);
+  const bcParam=urlParams.get('bc');
+  if(!bcParam) return;
+  function tryJump(retry){
+    if(retry<=0){showToast('⚠️ 読み込みタイムアウト','err');return;}
+    if(typeof masters==='undefined'||!masters||!masters.ok){
+      setTimeout(()=>tryJump(retry-1),500);
+      return;
+    }
+    changeTab('bulk');
+    setTimeout(()=>{
+      document.getElementById('footer-search-input').value=bcParam;
+      footerAdd();
+    },300);
+  }
+  setTimeout(()=>tryJump(20),500);
+})();
 </script>
 <!-- ヤフオク管理ポップアップ -->
 <div class="yahoo-popup-ov" id="yahoo-popup-ov">
